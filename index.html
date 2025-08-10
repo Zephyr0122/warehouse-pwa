@@ -1,47 +1,133 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>倉庫物料管理系統</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#317EFB"/>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #f0f0f0; }
-        button { padding: 5px 10px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>倉庫物料管理</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4CAF50" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      background: #f4f4f4;
+    }
+    h1 {
+      color: #4CAF50;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+    }
+    input, button {
+      padding: 8px;
+      margin-top: 5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
 </head>
 <body>
-    <h1>📦 倉庫物料管理</h1>
-    <table id="dataTable">
-        <thead>
-            <tr><th>品名</th><th>數量</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+  <h1>📦 倉庫物料管理</h1>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbx5u-_6wouX60UPCJvPy4BIYDlwcEqSK9xSk1VNkBTpkslJgBnE_ZAtaCKwZVLZXAWi/exec";
-        
-        async function fetchData(){
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            const tbody = document.querySelector("#dataTable tbody");
-            tbody.innerHTML = "";
-            data.forEach(row => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${row.品名}</td><td>${row.數量}</td>`;
-                tbody.appendChild(tr);
-            });
-        }
-        fetchData();
+  <div class="card">
+    <h2>新增物料</h2>
+    <input type="text" id="item" placeholder="物料名稱" />
+    <input type="number" id="quantity" placeholder="數量" />
+    <input type="text" id="location" placeholder="位置" />
+    <input type="text" id="remark" placeholder="備註" />
+    <button id="addItem">➕ 新增</button>
+  </div>
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
-        }
-    </script>
+  <div class="card">
+    <h2>資料查詢</h2>
+    <button id="refresh">🔄 重新載入資料</button>
+    <div id="data">尚未載入資料</div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbx5u-_6wouX60UPCJvPy4BIYDlwcEqSK9xSk1VNkBTpkslJgBnE_ZAtaCKwZVLZXAWi/exec";
+
+    // 查詢資料
+    async function loadData() {
+      document.getElementById("data").innerHTML = "載入中...";
+      try {
+        const res = await fetch(API_URL);
+        const text = await res.text();
+        document.getElementById("data").innerHTML = `<pre>${text}</pre>`;
+      } catch (err) {
+        document.getElementById("data").innerHTML = "❌ 無法取得資料";
+        console.error(err);
+      }
+    }
+
+    // 新增資料
+    async function addItem() {
+      const item = document.getElementById("item").value.trim();
+      const quantity = document.getElementById("quantity").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const remark = document.getElementById("remark").value.trim();
+
+      if (!item || !quantity) {
+        alert("請輸入物料名稱與數量！");
+        return;
+      }
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            item,
+            quantity,
+            location,
+            remark
+          })
+        });
+
+        const result = await res.text();
+        alert("✅ 新增成功！\n" + result);
+
+        // 清空欄位
+        document.getElementById("item").value = "";
+        document.getElementById("quantity").value = "";
+        document.getElementById("location").value = "";
+        document.getElementById("remark").value = "";
+
+        loadData();
+      } catch (err) {
+        alert("❌ 新增失敗");
+        console.error(err);
+      }
+    }
+
+    document.getElementById("refresh").addEventListener("click", loadData);
+    document.getElementById("addItem").addEventListener("click", addItem);
+
+    // 初始化載入
+    loadData();
+
+    // PWA 註冊
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
+    }
+  </script>
 </body>
 </html>
