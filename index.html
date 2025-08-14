@@ -6,7 +6,7 @@
 <title>倉庫物料管理（PWA）</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
   body { -webkit-tap-highlight-color: transparent; }
   .table-responsive { overflow-x: auto; }
@@ -14,65 +14,21 @@
   .small-input { padding: .45rem .6rem; font-size: .95rem; }
   .low-stock { background-color: #fff3cd !important; }
   .out-of-stock { background-color: #f8d7da !important; }
-  .warning-badge { font-size: 0.7em; margin-left: .35rem; }
-  /* 條碼掃描器 */
-  .barcode-scanner {
-    position: fixed; inset: 0; background: rgba(0,0,0,.92);
-    z-index: 9999; display: none; color:#fff;
-  }
-  #scannerVideo { width: 94%; max-width: 520px; margin: 48px auto 12px; display: block; border-radius: 8px; }
-  .scanner-controls { position: fixed; bottom: 24px; left: 0; right:0; display:flex; justify-content:center; gap:.75rem; }
+  .scroll-table { max-height: 250px; overflow-y: auto; }
 </style>
 </head>
-
 <body class="bg-light">
 <div class="container py-3">
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
 
-  <!-- 搜尋/篩選 -->
-  <div class="d-flex gap-2 mb-2">
-    <input id="search" class="form-control small-input" placeholder="模糊搜尋：名稱、序號、倉庫、位置、備註…">
-    <select id="warehouseFilter" class="form-select small-input" aria-label="倉庫篩選">
-      <option value="">全部倉庫</option>
-    </select>
-    <select id="locationFilter" class="form-select small-input" aria-label="位置篩選">
-      <option value="">全部位置</option>
-    </select>
-  </div>
-
-  <div class="d-flex gap-2 mb-3">
-    <button id="refreshBtn" class="btn btn-outline-primary w-100 big-btn">重新整理</button>
-    <button id="exportCsv" class="btn btn-outline-success w-100 big-btn">匯出 CSV</button>
-  </div>
-
-  <div class="table-responsive bg-white rounded shadow-sm p-2">
-    <table class="table table-sm table-striped mb-0">
-      <thead class="table-dark small">
-        <tr>
-          <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th><th>低庫存警戒</th><th>最後更新</th>
-        </tr>
-      </thead>
-      <tbody id="materialTable" class="small"></tbody>
-    </table>
-  </div>
-
-  <!-- 入庫 -->
+  <!-- 入庫卡片 -->
   <div class="card mt-3 p-3">
     <h5 class="mb-2">➕ 入庫 / 新增</h5>
     <input id="name" class="form-control mb-2 small-input" placeholder="物料名稱">
     <div class="row g-2">
-      <div class="col-4"><input id="qty" type="number" min="1" class="form-control small-input" placeholder="數量"></div>
-      <div class="col-4"><input id="lowStock" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值（此物料）"></div>
-      <div class="col-4">
-        <div class="input-group">
-          <input id="serial" class="form-control small-input" placeholder="序號（逗號分隔）">
-          <button id="scanSerialBtn" class="btn btn-outline-secondary" type="button" title="掃描序號">
-            <i class="fas fa-barcode"></i>
-          </button>
-        </div>
-      </div>
+      <div class="col-6"><input id="qty" type="number" min="1" class="form-control small-input" placeholder="數量"></div>
+      <div class="col-6"><input id="serial" class="form-control small-input" placeholder="序號（逗號分隔）"></div>
     </div>
-
     <div class="row g-2 mt-2">
       <div class="col-6">
         <select id="warehouse" class="form-select small-input">
@@ -91,23 +47,13 @@
     <button id="addBtn" class="btn btn-success mt-3 w-100 big-btn">新增 / 入庫</button>
   </div>
 
-  <!-- 出庫 -->
+  <!-- 出庫卡片 -->
   <div class="card mt-3 p-3">
     <h5 class="mb-2">➖ 出庫</h5>
     <input id="out_name" class="form-control mb-2 small-input" placeholder="物料名稱（必填）">
     <div class="row g-2">
-      <div class="col-4"><input id="out_qty" type="number" min="1" class="form-control small-input" placeholder="數量（必填）"></div>
-      <div class="col-4">
-        <div class="input-group">
-          <input id="out_serial" class="form-control small-input" placeholder="指定序號（逗號分隔，可空）">
-          <button id="scanOutSerialBtn" class="btn btn-outline-secondary" type="button" title="掃描序號">
-            <i class="fas fa-barcode"></i>
-          </button>
-        </div>
-      </div>
-      <div class="col-4">
-        <input id="out_note" class="form-control small-input" placeholder="備註（可空）">
-      </div>
+      <div class="col-6"><input id="out_qty" type="number" min="1" class="form-control small-input" placeholder="數量（必填）"></div>
+      <div class="col-6"><input id="out_serial" class="form-control small-input" placeholder="指定序號（逗號分隔，可空）"></div>
     </div>
     <div class="row g-2 mt-2">
       <div class="col-6"><input id="out_warehouse" class="form-control small-input" placeholder="倉庫（必填）"></div>
@@ -115,272 +61,143 @@
     </div>
     <button id="outBtn" class="btn btn-danger mt-3 w-100 big-btn">執行出庫</button>
   </div>
+
+  <!-- 低庫存告警清單 -->
+  <div class="card mt-3 p-3">
+    <h5 class="mb-2">⚠️ 低庫存告警</h5>
+    <div class="scroll-table">
+      <table class="table table-sm table-striped mb-0">
+        <thead class="table-dark small">
+          <tr>
+            <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th>
+          </tr>
+        </thead>
+        <tbody id="lowStockTable" class="small"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 搜尋與篩選 -->
+  <div class="d-flex gap-2 mt-3">
+    <input id="search" class="form-control small-input" placeholder="搜尋名稱或序號">
+    <select id="warehouseFilter" class="form-select small-input"><option value="">全部倉庫</option></select>
+    <select id="locationFilter" class="form-select small-input"><option value="">全部位置</option></select>
+  </div>
+
+  <!-- 按鈕 -->
+  <div class="d-flex gap-2 my-3">
+    <button id="refreshBtn" class="btn btn-outline-primary w-100 big-btn">重新整理</button>
+    <button id="exportCsv" class="btn btn-outline-success w-100 big-btn">匯出 CSV</button>
+  </div>
+
+  <!-- 全部資料表 -->
+  <div class="table-responsive bg-white rounded shadow-sm p-2">
+    <table class="table table-sm table-striped mb-0">
+      <thead class="table-dark small">
+        <tr>
+          <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th><th>最後更新</th>
+        </tr>
+      </thead>
+      <tbody id="materialTable" class="small"></tbody>
+    </table>
+  </div>
 </div>
 
-<!-- 條碼掃描器 Overlay -->
-<div id="barcodeScanner" class="barcode-scanner">
-  <div class="text-center p-3">
-    <h5 class="fw-bold mb-1">條碼掃描器</h5>
-    <div class="small text-white-50">請將條碼對準鏡頭，成功後自動填入</div>
-  </div>
-  <video id="scannerVideo" playsinline></video>
-  <div class="scanner-controls">
-    <button id="closeScannerBtn" class="btn btn-danger"><i class="fas fa-times"></i> 關閉</button>
-    <button id="switchCameraBtn" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> 切換鏡頭</button>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
-/* ========= 基本設定 ========= */
-// ★ 換成你的 Apps Script 網址
 const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
-
-// 資料快取
 let rawData = [];
-let currentScanTarget = null;
-let currentFacing = 'environment'; // 或 'user'
 
-/* ========= 載入資料 ========= */
 async function loadData() {
   try {
     const res = await fetch(API_URL);
     rawData = await res.json();
-    localStorage.setItem('lastData', JSON.stringify(rawData));
     renderFilters();
+    renderLowStock();
     renderTable();
   } catch (err) {
-    const cached = localStorage.getItem('lastData');
-    if (cached) {
-      rawData = JSON.parse(cached);
-      renderFilters();
-      renderTable();
-      alert('離線顯示快取資料');
-    } else {
-      alert('無法取得資料，請檢查網路或 API 設定');
-    }
+    alert('無法取得資料');
   }
 }
 
-/* ========= 篩選器 ========= */
 function renderFilters() {
   const rows = rawData.slice(1);
-  const warehouses = new Set();
-  const locations = new Set();
-  rows.forEach(r => {
-    if (r[3]) warehouses.add(r[3]);
-    if (r[4]) locations.add(r[4]);
-  });
+  const warehouses = [...new Set(rows.map(r => r[3]).filter(Boolean))];
+  const locations = [...new Set(rows.map(r => r[4]).filter(Boolean))];
+
   const whFilter = document.getElementById('warehouseFilter');
   const locFilter = document.getElementById('locationFilter');
+  whFilter.innerHTML = '<option value="">全部倉庫</option>' + warehouses.map(w => `<option>${w}</option>`).join('');
+  locFilter.innerHTML = '<option value="">全部位置</option>' + locations.map(l => `<option>${l}</option>`).join('');
+
   const whSelect = document.getElementById('warehouse');
   const locSelect = document.getElementById('location');
-
-  [whFilter, whSelect].forEach(s => {
-    s.innerHTML = '<option value="">全部倉庫</option>';
-    warehouses.forEach(w => s.innerHTML += `<option value="${w}">${w}</option>`);
-  });
-  [locFilter, locSelect].forEach(s => {
-    s.innerHTML = '<option value="">全部位置</option>';
-    locations.forEach(l => s.innerHTML += `<option value="${l}">${l}</option>`);
-  });
+  whSelect.innerHTML = '<option value="">選擇倉庫 / 或輸入新倉庫</option>' + warehouses.map(w => `<option>${w}</option>`).join('');
+  locSelect.innerHTML = '<option value="">選擇位置 / 或輸入新位置</option>' + locations.map(l => `<option>${l}</option>`).join('');
 }
 
-/* ========= 表格渲染（含模糊搜尋 + 低庫存/缺貨標示） ========= */
+function renderLowStock() {
+  const tbody = document.getElementById('lowStockTable');
+  let lowStockItems = rawData.slice(1).filter(r => parseInt(r[2]) <= 5);
+  let html = '';
+  lowStockItems.slice(0, 5).forEach(r => {
+    html += `<tr><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`;
+  });
+  tbody.innerHTML = html || '<tr><td colspan="4" class="text-center">無低庫存項目</td></tr>';
+}
+
 function renderTable() {
   const tbody = document.getElementById('materialTable');
-  const kw = (document.getElementById('search').value || '').trim().toLowerCase();
+  const keyword = document.getElementById('search').value.toLowerCase();
   const whFilter = document.getElementById('warehouseFilter').value;
   const locFilter = document.getElementById('locationFilter').value;
-
   let html = '';
   rawData.slice(1).forEach(r => {
-    const [id, name, qty, warehouse, location, serial, note, lowStock, date] = r;
-    const qtyNum = Number(qty) || 0;
-    const low = Number(lowStock) || 0;
-
-    // 篩選
-    if (whFilter && warehouse !== whFilter) return;
-    if (locFilter && location !== locFilter) return;
-
-    // 模糊搜尋（整筆 row 串起來）
-    const hay = [id, name, qty, warehouse, location, serial, note, lowStock, date].join(' ').toLowerCase();
-    if (kw && !hay.includes(kw)) return;
-
-    // 樣式與標籤
-    let rowClass = '';
-    let badge = '';
-    if (qtyNum <= 0) {
-      rowClass = 'out-of-stock';
-      badge = '<span class="badge bg-danger warning-badge">缺貨</span>';
-    } else if (low > 0 && qtyNum <= low) {
-      rowClass = 'low-stock';
-      badge = '<span class="badge bg-warning text-dark warning-badge">低庫存</span>';
-    }
-
-    html += `<tr class="${rowClass}">
-      <td>${escapeHtml(name)} ${badge}</td>
-      <td>${escapeHtml(qty)}</td>
-      <td>${escapeHtml(warehouse)}</td>
-      <td>${escapeHtml(location)}</td>
-      <td>${escapeHtml(serial)}</td>
-      <td>${escapeHtml(note)}</td>
-      <td>${escapeHtml(lowStock ?? '')}</td>
-      <td>${escapeHtml(date)}</td>
-    </tr>`;
+    if (whFilter && r[3] !== whFilter) return;
+    if (locFilter && r[4] !== locFilter) return;
+    if (keyword && !(r[1].toLowerCase().includes(keyword) || r[5].toLowerCase().includes(keyword))) return;
+    html += `<tr><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td></tr>`;
   });
-
-  tbody.innerHTML = html || '<tr><td colspan="8" class="text-center text-muted small">無資料</td></tr>';
+  tbody.innerHTML = html || '<tr><td colspan="7" class="text-center">無資料</td></tr>';
 }
 
-function escapeHtml(text) {
-  return (text ?? '').toString().replace(/[&<>"']/g, m => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[m]));
-}
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  loadData();
+});
 
-/* ========= 入庫 ========= */
 document.getElementById('addBtn').addEventListener('click', async () => {
-  const name = document.getElementById('name').value.trim();
-  const qty = Number(document.getElementById('qty').value);
-  const lowStock = Number(document.getElementById('lowStock').value);
-  const warehouseText = document.getElementById('warehouseText').value.trim();
-  const locationText = document.getElementById('locationText').value.trim();
-  let warehouse = document.getElementById('warehouse').value;
-  let location = document.getElementById('location').value;
-  if (warehouseText) warehouse = warehouseText;
-  if (locationText) location = locationText;
-  const serial = document.getElementById('serial').value.trim();
-  const note = document.getElementById('note').value.trim();
-
-  if (!name || !qty || qty <= 0) {
-    alert('請輸入有效的名稱和數量');
-    return;
-  }
-
-  const payload = { action: 'add', name, qty, warehouse, location, serial, note, lowStock };
-  try {
-    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload), headers:{'Content-Type':'application/json'} });
-    if (!res.ok) throw new Error('新增失敗');
-    alert('新增成功');
-    ['name','qty','lowStock','warehouseText','locationText','serial','note'].forEach(id => document.getElementById(id).value = '');
-    loadData();
-  } catch (e) {
-    alert('新增失敗，請稍後再試');
-  }
+  const payload = {
+    action: 'add',
+    name: document.getElementById('name').value.trim(),
+    qty: document.getElementById('qty').value,
+    warehouse: document.getElementById('warehouseText').value.trim() || document.getElementById('warehouse').value,
+    location: document.getElementById('locationText').value.trim() || document.getElementById('location').value,
+    serial: document.getElementById('serial').value.trim(),
+    note: document.getElementById('note').value.trim()
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  loadData();
 });
 
-/* ========= 出庫 ========= */
 document.getElementById('outBtn').addEventListener('click', async () => {
-  const name = document.getElementById('out_name').value.trim();
-  const qty = Number(document.getElementById('out_qty').value);
-  const warehouse = document.getElementById('out_warehouse').value.trim();
-  const location = document.getElementById('out_location').value.trim();
-  const serial = document.getElementById('out_serial').value.trim(); // 目前後端未逐筆扣序號，保留上傳備查
-  const note = document.getElementById('out_note').value.trim();
-
-  if (!name || !qty || qty <= 0 || !warehouse || !location) {
-    alert('請完整填寫出庫資訊');
-    return;
-  }
-
-  const payload = { action: 'out', name, qty, warehouse, location, serial, note };
-  try {
-    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload), headers:{'Content-Type':'application/json'} });
-    if (!res.ok) throw new Error('出庫失敗');
-    alert('出庫成功');
-    ['out_name','out_qty','out_warehouse','out_location','out_serial','out_note'].forEach(id => document.getElementById(id).value = '');
-    loadData();
-  } catch (e) {
-    alert('出庫失敗，請稍後再試');
-  }
+  const payload = {
+    action: 'delete',
+    name: document.getElementById('out_name').value.trim(),
+    qty: document.getElementById('out_qty').value,
+    warehouse: document.getElementById('out_warehouse').value.trim(),
+    location: document.getElementById('out_location').value.trim(),
+    serial: document.getElementById('out_serial').value.trim()
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  loadData();
 });
 
-/* ========= 匯出 CSV ========= */
-document.getElementById('exportCsv').addEventListener('click', () => {
-  let csv = '\uFEFF名稱,數量,倉庫,位置,序號,備註,低庫存警戒,最後更新\n';
-  rawData.slice(1).forEach(row => {
-    const cells = [row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8]].map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
-    csv += cells.join(',') + '\n';
-  });
-  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `倉庫物料清單_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-});
+document.getElementById('search').addEventListener('input', renderTable);
+document.getElementById('warehouseFilter').addEventListener('change', renderTable);
+document.getElementById('locationFilter').addEventListener('change', renderTable);
 
-/* ========= 條碼掃描（QuaggaJS） ========= */
-function startBarcodeScanner(targetId) {
-  currentScanTarget = targetId;
-  document.getElementById('barcodeScanner').style.display = 'block';
-
-  Quagga.init({
-    inputStream: {
-      name: "Live",
-      type: "LiveStream",
-      target: document.querySelector('#scannerVideo'),
-      constraints: { facingMode: currentFacing }
-    },
-    decoder: {
-      readers: [
-        "code_128_reader","ean_reader","ean_8_reader","code_39_reader",
-        "codabar_reader","upc_reader","upc_e_reader","i2of5_reader"
-      ]
-    },
-    locate: true
-  }, function(err) {
-    if (err) { console.error(err); alert('無法啟動攝影機'); stopBarcodeScanner(); return; }
-    Quagga.start();
-  });
-
-  Quagga.onDetected(onDetectedOnce);
-}
-
-function onDetectedOnce(res) {
-  const code = (res && res.codeResult && res.codeResult.code) ? res.codeResult.code : '';
-  if (!code) return;
-  const el = document.getElementById(currentScanTarget);
-  if (el) {
-    if (currentScanTarget.includes('serial')) {
-      el.value = el.value ? (el.value + ',' + code) : code;
-    } else {
-      el.value = code;
-    }
-  }
-  stopBarcodeScanner();
-}
-
-function stopBarcodeScanner() {
-  try { Quagga.offDetected(onDetectedOnce); Quagga.stop(); } catch {}
-  document.getElementById('barcodeScanner').style.display = 'none';
-  currentScanTarget = null;
-}
-
-function switchCamera() {
-  currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
-  if (currentScanTarget) { stopBarcodeScanner(); startBarcodeScanner(currentScanTarget); }
-}
-
-/* ========= 事件 ========= */
-document.getElementById('refreshBtn').addEventListener('click', loadData);
-['search','warehouseFilter','locationFilter'].forEach(id => {
-  document.getElementById(id).addEventListener('input', renderTable);
-  document.getElementById(id).addEventListener('change', renderTable);
-});
-
-// 條碼按鈕
-document.getElementById('scanSerialBtn').addEventListener('click', () => startBarcodeScanner('serial'));
-document.getElementById('scanOutSerialBtn').addEventListener('click', () => startBarcodeScanner('out_serial'));
-document.getElementById('closeScannerBtn').addEventListener('click', stopBarcodeScanner);
-document.getElementById('switchCameraBtn').addEventListener('click', switchCamera);
-
-/* ========= 啟動 ========= */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
-}
 loadData();
 </script>
 </body>
