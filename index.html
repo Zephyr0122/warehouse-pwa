@@ -9,195 +9,203 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
   body { -webkit-tap-highlight-color: transparent; }
-  .table-responsive { overflow-x: auto; }
   .big-btn { padding: .65rem; font-size: 1rem; }
   .small-input { padding: .45rem .6rem; font-size: .95rem; }
   .low-stock { background-color: #fff3cd !important; }
   .out-of-stock { background-color: #f8d7da !important; }
   .scroll-table { max-height: 250px; overflow-y: auto; }
+  .barcode-scanner { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 9999; display: none; 
+  }
+  #video { width: 100%; max-width: 400px; margin: 50px auto; display: block; }
 </style>
 </head>
 <body class="bg-light">
 <div class="container py-3">
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
 
-  <!-- 入庫卡片 -->
-  <div class="card mt-3 p-3">
-    <h5 class="mb-2">➕ 入庫 / 新增</h5>
-    <input id="name" class="form-control mb-2 small-input" placeholder="物料名稱">
-    <div class="row g-2">
-      <div class="col-6"><input id="qty" type="number" min="1" class="form-control small-input" placeholder="數量"></div>
-      <div class="col-6"><input id="serial" class="form-control small-input" placeholder="序號（逗號分隔）"></div>
-    </div>
-    <div class="row g-2 mt-2">
-      <div class="col-6">
-        <select id="warehouse" class="form-select small-input">
-          <option value="">選擇倉庫 / 或輸入新倉庫</option>
-        </select>
-      </div>
-      <div class="col-6">
-        <select id="location" class="form-select small-input">
-          <option value="">選擇位置 / 或輸入新位置</option>
-        </select>
-      </div>
-    </div>
-    <input id="warehouseText" class="form-control mt-2 small-input" placeholder="(或直接輸入倉庫名稱覆蓋上方)">
-    <input id="locationText" class="form-control mt-2 small-input" placeholder="(或直接輸入位置名稱覆蓋上方)">
-    <input id="note" class="form-control mt-2 small-input" placeholder="備註">
-    <button id="addBtn" class="btn btn-success mt-3 w-100 big-btn">新增 / 入庫</button>
+  <!-- 查詢 -->
+  <div class="d-flex gap-2 mb-3">
+    <input id="search" class="form-control small-input" placeholder="搜尋名稱、序號、倉庫、位置、備註">
+    <select id="warehouseFilter" class="form-select small-input">
+      <option value="">全部倉庫</option>
+    </select>
+    <select id="locationFilter" class="form-select small-input">
+      <option value="">全部位置</option>
+    </select>
+    <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
   </div>
 
-  <!-- 出庫卡片 -->
-  <div class="card mt-3 p-3">
-    <h5 class="mb-2">➖ 出庫</h5>
-    <input id="out_name" class="form-control mb-2 small-input" placeholder="物料名稱（必填）">
-    <div class="row g-2">
-      <div class="col-6"><input id="out_qty" type="number" min="1" class="form-control small-input" placeholder="數量（必填）"></div>
-      <div class="col-6"><input id="out_serial" class="form-control small-input" placeholder="指定序號（逗號分隔，可空）"></div>
+  <!-- 入庫 -->
+  <div class="card p-3 mb-3">
+    <h5>➕ 入庫</h5>
+    <input id="in_name" class="form-control small-input mb-2" placeholder="物料名稱">
+    <div class="input-group mb-2">
+      <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
+      <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
     </div>
-    <div class="row g-2 mt-2">
-      <div class="col-6"><input id="out_warehouse" class="form-control small-input" placeholder="倉庫（必填）"></div>
-      <div class="col-6"><input id="out_location" class="form-control small-input" placeholder="位置（必填）"></div>
+    <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
+    <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
+    <div class="input-group mb-2">
+      <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+      <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
     </div>
-    <button id="outBtn" class="btn btn-danger mt-3 w-100 big-btn">執行出庫</button>
+    <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
+    <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
   </div>
 
-  <!-- 低庫存告警清單 -->
-  <div class="card mt-3 p-3">
-    <h5 class="mb-2">⚠️ 低庫存告警</h5>
+  <!-- 出庫 -->
+  <div class="card p-3 mb-3">
+    <h5>➖ 出庫</h5>
+    <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
+    <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
+    <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
+    <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
+    <div class="input-group mb-2">
+      <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+      <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
+    </div>
+    <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
+  </div>
+
+  <!-- 低庫存告警 -->
+  <div class="card p-3">
+    <h5 class="mb-2"><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
     <div class="scroll-table">
-      <table class="table table-sm table-striped mb-0">
-        <thead class="table-dark small">
+      <table class="table table-sm table-striped">
+        <thead class="table-dark">
           <tr>
-            <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th>
+            <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>位置</th>
           </tr>
         </thead>
-        <tbody id="lowStockTable" class="small"></tbody>
+        <tbody id="lowStockTable"></tbody>
       </table>
     </div>
   </div>
+</div>
 
-  <!-- 搜尋與篩選 -->
-  <div class="d-flex gap-2 mt-3">
-    <input id="search" class="form-control small-input" placeholder="搜尋名稱或序號">
-    <select id="warehouseFilter" class="form-select small-input"><option value="">全部倉庫</option></select>
-    <select id="locationFilter" class="form-select small-input"><option value="">全部位置</option></select>
-  </div>
-
-  <!-- 按鈕 -->
-  <div class="d-flex gap-2 my-3">
-    <button id="refreshBtn" class="btn btn-outline-primary w-100 big-btn">重新整理</button>
-    <button id="exportCsv" class="btn btn-outline-success w-100 big-btn">匯出 CSV</button>
-  </div>
-
-  <!-- 全部資料表 -->
-  <div class="table-responsive bg-white rounded shadow-sm p-2">
-    <table class="table table-sm table-striped mb-0">
-      <thead class="table-dark small">
-        <tr>
-          <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th><th>最後更新</th>
-        </tr>
-      </thead>
-      <tbody id="materialTable" class="small"></tbody>
-    </table>
+<!-- 條碼掃描器 -->
+<div id="barcodeScanner" class="barcode-scanner">
+  <video id="video" playsinline></video>
+  <div class="text-center mt-3">
+    <button id="closeScannerBtn" class="btn btn-danger">關閉</button>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
+const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
 let rawData = [];
+let currentScanTarget = null;
 
-async function loadData() {
+// 讀取資料
+async function loadData(){
   try {
     const res = await fetch(API_URL);
     rawData = await res.json();
     renderFilters();
     renderLowStock();
-    renderTable();
-  } catch (err) {
-    alert('無法取得資料');
-  }
+  } catch(e){ alert("讀取失敗"); }
 }
 
-function renderFilters() {
-  const rows = rawData.slice(1);
-  const warehouses = [...new Set(rows.map(r => r[3]).filter(Boolean))];
-  const locations = [...new Set(rows.map(r => r[4]).filter(Boolean))];
-
-  const whFilter = document.getElementById('warehouseFilter');
-  const locFilter = document.getElementById('locationFilter');
-  whFilter.innerHTML = '<option value="">全部倉庫</option>' + warehouses.map(w => `<option>${w}</option>`).join('');
-  locFilter.innerHTML = '<option value="">全部位置</option>' + locations.map(l => `<option>${l}</option>`).join('');
-
-  const whSelect = document.getElementById('warehouse');
-  const locSelect = document.getElementById('location');
-  whSelect.innerHTML = '<option value="">選擇倉庫 / 或輸入新倉庫</option>' + warehouses.map(w => `<option>${w}</option>`).join('');
-  locSelect.innerHTML = '<option value="">選擇位置 / 或輸入新位置</option>' + locations.map(l => `<option>${l}</option>`).join('');
+function renderFilters(){
+  const whSet = new Set(), locSet = new Set();
+  rawData.slice(1).forEach(r=>{
+    if(r[COLS.wh]) whSet.add(r[COLS.wh]);
+    if(r[COLS.loc]) locSet.add(r[COLS.loc]);
+  });
+  const whSel = document.getElementById('warehouseFilter');
+  const locSel = document.getElementById('locationFilter');
+  whSel.innerHTML = '<option value="">全部倉庫</option>';
+  locSel.innerHTML = '<option value="">全部位置</option>';
+  whSet.forEach(w=> whSel.innerHTML += `<option>${w}</option>`);
+  locSet.forEach(l=> locSel.innerHTML += `<option>${l}</option>`);
 }
 
-function renderLowStock() {
+function renderLowStock(){
+  const kw = document.getElementById('search').value.trim().toLowerCase();
+  const whF = document.getElementById('warehouseFilter').value;
+  const locF = document.getElementById('locationFilter').value;
+  let list = rawData.slice(1).filter(r=>{
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> (r[c]||'').toLowerCase().includes(kw));
+    const matchWh = !whF || r[COLS.wh]===whF;
+    const matchLoc = !locF || r[COLS.loc]===locF;
+    return matchKw && matchWh && matchLoc && (parseInt(r[COLS.qty]) <= parseInt(r[COLS.th]||5));
+  });
   const tbody = document.getElementById('lowStockTable');
-  let lowStockItems = rawData.slice(1).filter(r => parseInt(r[2]) <= 5);
-  let html = '';
-  lowStockItems.slice(0, 5).forEach(r => {
-    html += `<tr><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`;
-  });
-  tbody.innerHTML = html || '<tr><td colspan="4" class="text-center">無低庫存項目</td></tr>';
+  tbody.innerHTML = list.slice(0,5).map(r=>`
+    <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
+      <td>${r[COLS.name]}</td>
+      <td>${r[COLS.qty]}</td>
+      <td>${r[COLS.th]}</td>
+      <td>${r[COLS.wh]}</td>
+      <td>${r[COLS.loc]}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted">無資料</td></tr>';
 }
 
-function renderTable() {
-  const tbody = document.getElementById('materialTable');
-  const keyword = document.getElementById('search').value.toLowerCase();
-  const whFilter = document.getElementById('warehouseFilter').value;
-  const locFilter = document.getElementById('locationFilter').value;
-  let html = '';
-  rawData.slice(1).forEach(r => {
-    if (whFilter && r[3] !== whFilter) return;
-    if (locFilter && r[4] !== locFilter) return;
-    if (keyword && !(r[1].toLowerCase().includes(keyword) || r[5].toLowerCase().includes(keyword))) return;
-    html += `<tr><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td></tr>`;
+// 掃碼功能
+function startScanner(targetId){
+  currentScanTarget = targetId;
+  document.getElementById('barcodeScanner').style.display='block';
+  Quagga.init({
+    inputStream:{ type:"LiveStream", target:document.querySelector('#video'), constraints:{facingMode:"environment"} },
+    decoder:{ readers:["code_128_reader","ean_reader","ean_8_reader"] }
+  },err=>{ if(err){alert(err);stopScanner();return;} Quagga.start(); });
+  Quagga.onDetected(res=>{
+    document.getElementById(currentScanTarget).value = res.codeResult.code;
+    stopScanner();
   });
-  tbody.innerHTML = html || '<tr><td colspan="7" class="text-center">無資料</td></tr>';
 }
+function stopScanner(){ Quagga.stop(); document.getElementById('barcodeScanner').style.display='none'; currentScanTarget=null; }
 
-document.getElementById('refreshBtn').addEventListener('click', () => {
-  document.getElementById('search').value = '';
-  document.getElementById('warehouseFilter').value = '';
-  document.getElementById('locationFilter').value = '';
-  loadData();
-});
-
-document.getElementById('addBtn').addEventListener('click', async () => {
+// 入庫
+document.getElementById('inBtn').onclick=async()=>{
   const payload = {
-    action: 'add',
-    name: document.getElementById('name').value.trim(),
-    qty: document.getElementById('qty').value,
-    warehouse: document.getElementById('warehouseText').value.trim() || document.getElementById('warehouse').value,
-    location: document.getElementById('locationText').value.trim() || document.getElementById('location').value,
-    serial: document.getElementById('serial').value.trim(),
-    note: document.getElementById('note').value.trim()
+    action:"add",
+    name:in_name.value.trim(),
+    qty:in_qty.value.trim(),
+    warehouse:in_wh.value.trim(),
+    location:in_loc.value.trim(),
+    sn:in_sn.value.trim(),
+    note:in_note.value.trim(),
+    threshold:in_threshold.value.trim()
   };
-  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  if(!payload.name||!payload.qty){alert("名稱與數量必填");return;}
+  await fetch(API_URL,{method:"POST",body:JSON.stringify(payload)});
   loadData();
-});
+};
 
-document.getElementById('outBtn').addEventListener('click', async () => {
+// 出庫
+document.getElementById('outBtn').onclick=async()=>{
   const payload = {
-    action: 'delete',
-    name: document.getElementById('out_name').value.trim(),
-    qty: document.getElementById('out_qty').value,
-    warehouse: document.getElementById('out_warehouse').value.trim(),
-    location: document.getElementById('out_location').value.trim(),
-    serial: document.getElementById('out_serial').value.trim()
+    action:"delete",
+    name:out_name.value.trim(),
+    qty:out_qty.value.trim(),
+    warehouse:out_wh.value.trim(),
+    location:out_loc.value.trim(),
+    sn:out_sn.value.trim()
   };
-  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  if(!payload.name||!payload.qty){alert("名稱與數量必填");return;}
+  await fetch(API_URL,{method:"POST",body:JSON.stringify(payload)});
   loadData();
-});
+};
 
-document.getElementById('search').addEventListener('input', renderTable);
-document.getElementById('warehouseFilter').addEventListener('change', renderTable);
-document.getElementById('locationFilter').addEventListener('change', renderTable);
+// 事件
+document.getElementById('search').oninput=renderLowStock;
+document.getElementById('warehouseFilter').onchange=renderLowStock;
+document.getElementById('locationFilter').onchange=renderLowStock;
+document.getElementById('refreshBtn').onclick=()=>{
+  search.value=''; warehouseFilter.value=''; locationFilter.value='';
+  loadData();
+};
+document.getElementById('scanInSnBtn').onclick=()=>startScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick=()=>startScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick=stopScanner;
 
+// 初始化
 loadData();
 </script>
 </body>
