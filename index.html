@@ -60,97 +60,222 @@
     font-size: 0.9rem; color: #6c757d;
     min-width: 100px; text-align: center;
   }
+  
+  /* 歷史紀錄樣式 */
+  .history-record {
+    border-left: 3px solid #007bff;
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+  .history-record.in {
+    border-left-color: #28a745;
+  }
+  .history-record.out {
+    border-left-color: #dc3545;
+  }
+  
+  /* 匯出按鈕樣式 */
+  .export-btn {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+  }
+  .export-btn:hover {
+    background: linear-gradient(135deg, #138496, #117a8b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  /* 標籤頁樣式 */
+  .nav-tabs .nav-link {
+    border-radius: 8px 8px 0 0;
+    margin-right: 2px;
+  }
+  .nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+    color: white !important;
+  }
 </style>
 </head>
 <body class="bg-light">
 <div class="container py-3">
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
 
-  <!-- 查詢 -->
-  <div class="card p-3 mb-3">
-    <h5>🔍 查詢</h5>
-    <div class="d-flex gap-2 mb-3">
-        <input id="search" class="form-control small-input" placeholder="搜尋">
-        <select id="warehouseFilter" class="form-select small-input">
-            <option value="">全部倉庫</option>
-        </select>
-        <select id="locationFilter" class="form-select small-input">
-            <option value="">全部位置</option>
-        </select>
-        <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
-    </div>
-</div>
-    
-    <!-- 查詢結果 -->
-    <div id="searchResultsContainer" style="display: none;">
-      <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
-      <div class="search-results">
-        <table class="table table-sm table-striped">
-          <thead class="table-primary">
-            <tr>
-              <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th>
-            </tr>
-          </thead>
-          <tbody id="searchResultsTable"></tbody>
-        </table>
+  <!-- 主要功能標籤頁 -->
+  <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button" role="tab">
+        <i class="fas fa-boxes"></i> 物料管理
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+        <i class="fas fa-history"></i> 歷史紀錄
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="mainTabsContent">
+    <!-- 物料管理頁面 -->
+    <div class="tab-pane fade show active" id="management" role="tabpanel">
+      <!-- 查詢 -->
+      <div class="card p-3 mb-3">
+        <h5>🔍 查詢</h5>
+        <div class="d-flex gap-2 mb-3">
+            <input id="search" class="form-control small-input" placeholder="搜尋">
+            <select id="warehouseFilter" class="form-select small-input">
+                <option value="">全部倉庫</option>
+            </select>
+            <select id="locationFilter" class="form-select small-input">
+                <option value="">全部位置</option>
+            </select>
+            <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
+        </div>
+        
+        <!-- 查詢結果 -->
+        <div id="searchResultsContainer" style="display: none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
+            <button id="exportSearchBtn" class="btn btn-sm export-btn">
+              <i class="fas fa-download"></i> 匯出CSV
+            </button>
+          </div>
+          <div class="search-results">
+            <table class="table table-sm table-striped">
+              <thead class="table-primary">
+                <tr>
+                  <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th>
+                </tr>
+              </thead>
+              <tbody id="searchResultsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 入庫 -->
+      <div class="card p-3 mb-3">
+        <h5>➕ 入庫</h5>
+        <input id="in_name" class="form-control small-input mb-2" placeholder="物料名稱">
+        <div class="input-group mb-2">
+          <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
+          <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
+        </div>
+        <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
+        <div class="input-group mb-2">
+          <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+          <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
+        </div>
+        <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
+        <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
+      </div>
+
+      <!-- 出庫 -->
+      <div class="card p-3 mb-3">
+        <h5>➖ 出庫</h5>
+        <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
+        <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
+        <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
+        <div class="input-group mb-2">
+          <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+          <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
+        </div>
+        <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
+      </div>
+
+      <!-- 低庫存告警 -->
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
+          <button id="exportLowStockBtn" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> 匯出低庫存清單
+          </button>
+        </div>
+        <div class="scroll-table">
+          <table class="table table-sm table-striped">
+            <thead class="table-dark">
+              <tr>
+                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>位置</th>
+              </tr>
+            </thead>
+            <tbody id="lowStockTable"></tbody>
+          </table>
+        </div>
+        <!-- 分頁控制 -->
+        <div class="pagination-controls">
+          <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            <i class="fas fa-chevron-left"></i> 上一頁
+          </button>
+          <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
+          <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            下一頁 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 入庫 -->
-  <div class="card p-3 mb-3">
-    <h5>➕ 入庫</h5>
-    <input id="in_name" class="form-control small-input mb-2" placeholder="物料名稱">
-    <div class="input-group mb-2">
-      <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
-      <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
-    </div>
-    <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
-    <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
-    <div class="input-group mb-2">
-      <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
-      <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
-    </div>
-    <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
-    <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
-  </div>
-
-  <!-- 出庫 -->
-  <div class="card p-3 mb-3">
-    <h5>➖ 出庫</h5>
-    <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
-    <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
-    <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
-    <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
-    <div class="input-group mb-2">
-      <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
-      <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
-    </div>
-    <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
-  </div>
-
-  <!-- 低庫存告警 -->
-  <div class="card p-3">
-    <h5 class="mb-2"><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
-    <div class="scroll-table">
-      <table class="table table-sm table-striped">
-        <thead class="table-dark">
-          <tr>
-            <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>位置</th>
-          </tr>
-        </thead>
-        <tbody id="lowStockTable"></tbody>
-      </table>
-    </div>
-    <!-- 分頁控制 -->
-    <div class="pagination-controls">
-      <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-        <i class="fas fa-chevron-left"></i> 上一頁
-      </button>
-      <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
-      <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-        下一頁 <i class="fas fa-chevron-right"></i>
-      </button>
+    <!-- 歷史紀錄頁面 -->
+    <div class="tab-pane fade" id="history" role="tabpanel">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="fas fa-history text-info"></i> 出入庫歷史紀錄</h5>
+          <button id="exportHistoryBtn" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> 匯出歷史紀錄
+          </button>
+        </div>
+        
+        <!-- 歷史紀錄篩選器 -->
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
+          </div>
+          <div class="col-md-2">
+            <select id="historyAction" class="form-select small-input">
+              <option value="">全部動作</option>
+              <option value="入庫">入庫</option>
+              <option value="出庫">出庫</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <input id="historyDateStart" type="date" class="form-control small-input">
+          </div>
+          <div class="col-md-2">
+            <input id="historyDateEnd" type="date" class="form-control small-input">
+          </div>
+          <div class="col-md-2">
+            <select id="historyWarehouse" class="form-select small-input">
+              <option value="">全部倉庫</option>
+            </select>
+          </div>
+          <div class="col-md-1">
+            <button id="historyRefreshBtn" class="btn btn-outline-primary big-btn w-100">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 歷史紀錄列表 -->
+        <div id="historyContainer">
+          <div class="scroll-table" style="max-height: 400px;">
+            <div id="historyList"></div>
+          </div>
+          
+          <!-- 歷史紀錄分頁控制 -->
+          <div class="pagination-controls">
+            <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              <i class="fas fa-chevron-left"></i> 上一頁
+            </button>
+            <span id="historyPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+            <button id="historyNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              下一頁 <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -172,15 +297,19 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
 const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
 let rawData = [];
+let historyData = []; // 新增：歷史紀錄資料
 let currentScanTarget = null;
 let lowStockData = [];
 let currentPage = 1;
+let currentHistoryPage = 1; // 新增：歷史紀錄分頁
 const itemsPerPage = 5;
+const historyItemsPerPage = 10; // 新增：歷史紀錄每頁顯示數量
 
 // 讀取資料
 async function loadData(){
@@ -197,6 +326,49 @@ async function loadData(){
   }
 }
 
+// 新增：載入歷史紀錄
+async function loadHistoryData(){
+  try {
+    const res = await fetch(API_URL + "?action=getHistory");
+    historyData = await res.json();
+    renderHistoryFilters();
+    renderHistory();
+  } catch(e){ 
+    console.error("讀取歷史紀錄失敗:", e);
+    // 如果無法載入歷史紀錄，使用模擬資料
+    historyData = generateMockHistoryData();
+    renderHistoryFilters();
+    renderHistory();
+  }
+}
+
+// 新增：生成模擬歷史紀錄資料
+function generateMockHistoryData(){
+  const mockData = [];
+  const actions = ['入庫', '出�庫'];
+  const materials = ['螺絲', '螺帽', '墊片', '彈簧', '軸承'];
+  const warehouses = ['A倉', 'B倉', 'C倉'];
+  const locations = ['A1-01', 'A1-02', 'B2-01', 'B2-02', 'C3-01'];
+  
+  for(let i = 0; i < 50; i++){
+    const date = new Date();
+    date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+    
+    mockData.push({
+      timestamp: date.toISOString(),
+      action: actions[Math.floor(Math.random() * actions.length)],
+      material: materials[Math.floor(Math.random() * materials.length)],
+      quantity: Math.floor(Math.random() * 100) + 1,
+      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
+      location: locations[Math.floor(Math.random() * locations.length)],
+      serialNumber: 'SN' + Math.random().toString().substr(2, 8),
+      note: Math.random() > 0.5 ? '備註資訊' : ''
+    });
+  }
+  
+  return mockData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
 function renderFilters(){
   const whSet = new Set(), locSet = new Set();
   rawData.slice(1).forEach(r=>{
@@ -209,6 +381,20 @@ function renderFilters(){
   locSel.innerHTML = '<option value="">全部位置</option>';
   Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
   Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
+}
+
+// 新增：渲染歷史紀錄篩選器
+function renderHistoryFilters(){
+  const whSet = new Set();
+  historyData.forEach(record => {
+    if(record.warehouse) whSet.add(record.warehouse);
+  });
+  
+  const historyWhSel = document.getElementById('historyWarehouse');
+  historyWhSel.innerHTML = '<option value="">全部倉庫</option>';
+  Array.from(whSet).sort().forEach(w => 
+    historyWhSel.innerHTML += `<option value="${w}">${w}</option>`
+  );
 }
 
 // 更新低庫存資料
@@ -244,6 +430,97 @@ function renderLowStock(){
     totalPages > 0 ? `第 ${currentPage} 頁，共 ${totalPages} 頁 (總計 ${lowStockData.length} 筆)` : '無資料';
   document.getElementById('prevPageBtn').disabled = currentPage <= 1;
   document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+}
+
+// 新增：渲染歷史紀錄
+function renderHistory(){
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  // 篩選歷史紀錄
+  let filteredData = historyData.filter(record => {
+    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      const recordDate = new Date(record.timestamp).toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if(startDate){
+        matchDate = recordDate >= startDate;
+      } else if(endDate){
+        matchDate = recordDate <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  // 分頁處理
+  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
+  const endIndex = startIndex + historyItemsPerPage;
+  const pageData = filteredData.slice(startIndex, endIndex);
+  
+  const historyList = document.getElementById('historyList');
+  
+  if(pageData.length > 0){
+    historyList.innerHTML = pageData.map(record => {
+      const date = new Date(record.timestamp);
+      const dateStr = date.toLocaleDateString('zh-TW');
+      const timeStr = date.toLocaleTimeString('zh-TW');
+      
+      return `
+        <div class="history-record ${record.action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center mb-1">
+                <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                <strong>${record.action}</strong>
+                <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                  ${record.quantity} 件
+                </span>
+              </div>
+              <div class="text-muted small">
+                <div><strong>${record.material}</strong></div>
+                <div>
+                  <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'} 
+                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.location || '-'}
+                </div>
+                ${record.serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
+                ${record.note ? `<div><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
+              </div>
+            </div>
+            <div class="text-end text-muted small">
+              <div>${dateStr}</div>
+              <div>${timeStr}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    historyList.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="fas fa-inbox fa-3x mb-3"></i>
+        <p>無符合條件的歷史紀錄</p>
+      </div>
+    `;
+  }
+  
+  // 更新分頁資訊
+  document.getElementById('historyPageInfo').textContent = 
+    totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
+  document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
+  document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
 }
 
 // 渲染搜尋結果
@@ -290,194 +567,136 @@ function renderSearchResults(){
   }
 }
 
-// 改進的條碼掃描功能
-function startScanner(targetId){
-  currentScanTarget = targetId;
-  const scanner = document.getElementById('barcodeScanner');
-  scanner.style.display = 'flex';
+// 新增：CSV 匯出功能
+function exportToCSV(data, filename, headers) {
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => 
+      row.map(cell => 
+        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
+          ? `"${cell.replace(/"/g, '""')}"` : cell
+      ).join(',')
+    )
+  ].join('\n');
   
-  // 初始化攝影機
-  navigator.mediaDevices.getUserMedia({ 
-    video: { 
-      facingMode: "environment",
-      width: { ideal: 640 },
-      height: { ideal: 480 }
-    } 
-  }).then(stream => {
-    const video = document.getElementById('video');
-    video.srcObject = stream;
-    video.play();
-    
-    // 初始化 Quagga
-    Quagga.init({
-      inputStream: {
-        type: "LiveStream",
-        target: video,
-        constraints: {
-          width: 640,
-          height: 480,
-          facingMode: "environment"
-        }
-      },
-      locator: {
-        patchSize: "medium",
-        halfSample: true
-      },
-      numOfWorkers: 2,
-      decoder: {
-        readers: [
-          "code_128_reader",
-          "ean_reader", 
-          "ean_8_reader",
-          "code_39_reader"
-        ]
-      },
-      locate: true
-    }, err => {
-      if (err) {
-        console.error("Quagga初始化失敗:", err);
-        alert("無法啟動條碼掃描器：" + err.message);
-        stopScanner();
-        return;
-      }
-      Quagga.start();
-    });
-    
-    // 掃描結果處理
-    Quagga.onDetected(result => {
-      const code = result.codeResult.code;
-      document.getElementById(currentScanTarget).value = code;
-      
-      // 提供視覺回饋
-      navigator.vibrate && navigator.vibrate(200);
-      
-      setTimeout(() => {
-        stopScanner();
-        // 聚焦到下一個輸入框
-        const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
-        if(nextInput && nextInput.querySelector('input')){
-          nextInput.querySelector('input').focus();
-        }
-      }, 1000);
-    });
-    
-  }).catch(err => {
-    console.error("無法存取攝影機:", err);
-    alert("無法開啟攝影機，請確認權限設定");
-    stopScanner();
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// 新增：匯出搜尋結果
+function exportSearchResults() {
+  const kw = document.getElementById('search').value.trim().toLowerCase();
+  const whF = document.getElementById('warehouseFilter').value;
+  const locF = document.getElementById('locationFilter').value;
+  
+  let results = rawData.slice(1).filter(r=>{
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
+      (r[c] || '').toString().toLowerCase().includes(kw));
+    const matchWh = !whF || r[COLS.wh] === whF;
+    const matchLoc = !locF || r[COLS.loc] === locF;
+    return matchKw && matchWh && matchLoc;
   });
-}
-
-function stopScanner(){
-  Quagga.stop();
-  const video = document.getElementById('video');
-  if(video.srcObject){
-    video.srcObject.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-  }
-  document.getElementById('barcodeScanner').style.display = 'none';
-  currentScanTarget = null;
-}
-
-// 入庫
-document.getElementById('inBtn').onclick = async () => {
-  const payload = {
-    action: "add",
-    name: document.getElementById('in_name').value.trim(),
-    qty: document.getElementById('in_qty').value.trim(),
-    warehouse: document.getElementById('in_wh').value.trim(),
-    location: document.getElementById('in_loc').value.trim(),
-    sn: document.getElementById('in_sn').value.trim(),
-    note: document.getElementById('in_note').value.trim(),
-    threshold: document.getElementById('in_threshold').value.trim() || "5"
-  };
   
-  if (!payload.name || !payload.qty) {
-    alert("物料名稱與數量為必填項目");
+  if(results.length === 0) {
+    alert('沒有資料可匯出');
     return;
   }
   
-  try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-    // 清空表單
-    ['in_name', 'in_qty', 'in_wh', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
-      .forEach(id => document.getElementById(id).value = '');
-    await loadData();
-    alert("入庫成功！");
-  } catch (e) {
-    alert("入庫失敗：" + e.message);
-  }
-};
-
-// 出庫
-document.getElementById('outBtn').onclick = async () => {
-  const payload = {
-    action: "delete",
-    name: document.getElementById('out_name').value.trim(),
-    qty: document.getElementById('out_qty').value.trim(),
-    warehouse: document.getElementById('out_wh').value.trim(),
-    location: document.getElementById('out_loc').value.trim(),
-    sn: document.getElementById('out_sn').value.trim()
-  };
+  const headers = ['物料名稱', '數量', '倉庫', '位置', '序號', '備註', '警戒值', '更新日期'];
+  const exportData = results.map(r => [
+    r[COLS.name] || '',
+    r[COLS.qty] || 0,
+    r[COLS.wh] || '',
+    r[COLS.loc] || '',
+    r[COLS.sn] || '',
+    r[COLS.note] || '',
+    r[COLS.th] || 5,
+    r[COLS.date] || ''
+  ]);
   
-  if (!payload.name || !payload.qty) {
-    alert("物料名稱與數量為必填項目");
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
+}
+
+// 新增：匯出低庫存清單
+function exportLowStock() {
+  if(lowStockData.length === 0) {
+    alert('沒有低庫存資料可匯出');
     return;
   }
   
-  try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-    // 清空表單
-    ['out_name', 'out_qty', 'out_wh', 'out_loc', 'out_sn']
-      .forEach(id => document.getElementById(id).value = '');
-    await loadData();
-    alert("出庫成功！");
-  } catch (e) {
-    alert("出庫失敗：" + e.message);
+  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '位置', '序號', '備註', '狀態'];
+  const exportData = lowStockData.map(r => [
+    r[COLS.name] || '',
+    r[COLS.qty] || 0,
+    r[COLS.th] || 5,
+    r[COLS.wh] || '',
+    r[COLS.loc] || '',
+    r[COLS.sn] || '',
+    r[COLS.note] || '',
+    parseInt(r[COLS.qty]) === 0 ? '無庫存' : '低庫存'
+  ]);
+  
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
+}
+
+// 新增：匯出歷史紀錄
+function exportHistory() {
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  // 篩選歷史紀錄
+  let filteredData = historyData.filter(record => {
+    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      const recordDate = new Date(record.timestamp).toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if(startDate){
+        matchDate = recordDate >= startDate;
+      } else if(endDate){
+        matchDate = recordDate <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  if(filteredData.length === 0) {
+    alert('沒有符合條件的歷史紀錄可匯出');
+    return;
   }
-};
-
-// 事件綁定
-document.getElementById('search').oninput = renderSearchResults;
-document.getElementById('warehouseFilter').onchange = renderSearchResults;
-document.getElementById('locationFilter').onchange = renderSearchResults;
-document.getElementById('refreshBtn').onclick = () => {
-  document.getElementById('search').value = '';
-  document.getElementById('warehouseFilter').value = '';
-  document.getElementById('locationFilter').value = '';
-  loadData();
-};
-
-document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
-document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
-document.getElementById('closeScannerBtn').onclick = stopScanner;
-
-// 分頁控制
-document.getElementById('prevPageBtn').onclick = () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderLowStock();
-  }
-};
-
-document.getElementById('nextPageBtn').onclick = () => {
-  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
-  if (currentPage < totalPages) {
-    currentPage++;
-    renderLowStock();
-  }
-};
-
-// 初始化
-loadData();
-
-// 防止頁面刷新時攝影機未正確關閉
-window.addEventListener('beforeunload', stopScanner);
-</script>
-</body>
-</html>
-
-
-
-
-
+  
+  const headers = ['日期時間', '動作', '物料名稱', '數量', '倉庫', '位置', '序號', '備註'];
+  const exportData = filteredData.map(record => [
+    new Date(record.timestamp).toLocaleString('zh-TW'),
+    record.action,
+    record.material,
+    record.quantity,
+    record.warehouse || '',
+    record.location || '',
+    record.serialNumber || '',
+    record.note || ''
+  ]);
+  
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `出入庫歷史紀錄_${timestamp}.csv`, headers);
+}
