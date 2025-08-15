@@ -14,11 +14,52 @@
   .low-stock { background-color: #fff3cd !important; }
   .out-of-stock { background-color: #f8d7da !important; }
   .scroll-table { max-height: 250px; overflow-y: auto; }
+  
+  /* 條碼掃描器樣式優化 */
   .barcode-scanner { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.9); z-index: 9999; display: none; 
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.95); z-index: 9999; display: none;
+    justify-content: center; align-items: center; flex-direction: column;
   }
-  #video { width: 100%; max-width: 400px; margin: 50px auto; display: block; }
+  #video { 
+    width: 90%; max-width: 400px; height: auto;
+    border: 2px solid #28a745; border-radius: 10px;
+    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+  }
+  .scanner-overlay {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px; height: 150px;
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  .scanner-corner {
+    position: absolute; width: 20px; height: 20px;
+    border: 3px solid #28a745;
+  }
+  .scanner-corner.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+  .scanner-corner.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+  .scanner-corner.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+  .scanner-corner.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+  
+  .scanner-info {
+    color: white; text-align: center; margin-top: 20px;
+    font-size: 1.1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+  
+  /* 查詢結果區域 */
+  .search-results { max-height: 300px; overflow-y: auto; }
+  
+  /* 分頁按鈕 */
+  .pagination-controls {
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    margin-top: 10px;
+  }
+  .page-info {
+    font-size: 0.9rem; color: #6c757d;
+    min-width: 100px; text-align: center;
+  }
 </style>
 </head>
 <body class="bg-light">
@@ -26,15 +67,33 @@
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
 
   <!-- 查詢 -->
-  <div class="d-flex gap-2 mb-3">
-    <input id="search" class="form-control small-input" placeholder="搜尋名稱、序號、倉庫、位置、備註">
-    <select id="warehouseFilter" class="form-select small-input">
-      <option value="">全部倉庫</option>
-    </select>
-    <select id="locationFilter" class="form-select small-input">
-      <option value="">全部位置</option>
-    </select>
-    <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
+  <div class="card p-3 mb-3">
+    <h5>🔍 查詢</h5>
+    <div class="d-flex gap-2 mb-3">
+      <input id="search" class="form-control small-input" placeholder="搜尋名稱、序號、倉庫、位置、備註">
+      <select id="warehouseFilter" class="form-select small-input">
+        <option value="">全部倉庫</option>
+      </select>
+      <select id="locationFilter" class="form-select small-input">
+        <option value="">全部位置</option>
+      </select>
+      <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
+    </div>
+    
+    <!-- 查詢結果 -->
+    <div id="searchResultsContainer" style="display: none;">
+      <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
+      <div class="search-results">
+        <table class="table table-sm table-striped">
+          <thead class="table-primary">
+            <tr>
+              <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="searchResultsTable"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- 入庫 -->
@@ -82,23 +141,45 @@
         <tbody id="lowStockTable"></tbody>
       </table>
     </div>
+    <!-- 分頁控制 -->
+    <div class="pagination-controls">
+      <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+        <i class="fas fa-chevron-left"></i> 上一頁
+      </button>
+      <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
+      <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+        下一頁 <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </div>
 
 <!-- 條碼掃描器 -->
 <div id="barcodeScanner" class="barcode-scanner">
   <video id="video" playsinline></video>
-  <div class="text-center mt-3">
-    <button id="closeScannerBtn" class="btn btn-danger">關閉</button>
+  <div class="scanner-overlay">
+    <div class="scanner-corner top-left"></div>
+    <div class="scanner-corner top-right"></div>
+    <div class="scanner-corner bottom-left"></div>
+    <div class="scanner-corner bottom-right"></div>
+  </div>
+  <div class="scanner-info">
+    <p><i class="fas fa-barcode"></i> 請將條碼對準掃描框</p>
+    <button id="closeScannerBtn" class="btn btn-danger btn-lg">
+      <i class="fas fa-times"></i> 關閉掃描器
+    </button>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
+const API_URL = "你的 Apps Script API URL";
 const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
 let rawData = [];
 let currentScanTarget = null;
+let lowStockData = [];
+let currentPage = 1;
+const itemsPerPage = 5;
 
 // 讀取資料
 async function loadData(){
@@ -106,8 +187,13 @@ async function loadData(){
     const res = await fetch(API_URL);
     rawData = await res.json();
     renderFilters();
+    updateLowStockData();
     renderLowStock();
-  } catch(e){ alert("讀取失敗"); }
+    renderSearchResults();
+  } catch(e){ 
+    console.error("讀取失敗:", e);
+    alert("讀取資料失敗，請檢查網路連線或API設定"); 
+  }
 }
 
 function renderFilters(){
@@ -120,93 +206,272 @@ function renderFilters(){
   const locSel = document.getElementById('locationFilter');
   whSel.innerHTML = '<option value="">全部倉庫</option>';
   locSel.innerHTML = '<option value="">全部位置</option>';
-  whSet.forEach(w=> whSel.innerHTML += `<option>${w}</option>`);
-  locSet.forEach(l=> locSel.innerHTML += `<option>${l}</option>`);
+  Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
+  Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
 }
 
+// 更新低庫存資料
+function updateLowStockData(){
+  lowStockData = rawData.slice(1).filter(r=>{
+    const qty = parseInt(r[COLS.qty]) || 0;
+    const threshold = parseInt(r[COLS.th]) || 5;
+    return qty <= threshold;
+  });
+  currentPage = 1; // 重置到第一頁
+}
+
+// 渲染低庫存告警（分頁）
 function renderLowStock(){
+  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const pageData = lowStockData.slice(startIndex, endIndex);
+  
+  const tbody = document.getElementById('lowStockTable');
+  tbody.innerHTML = pageData.map(r=>`
+    <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
+      <td>${r[COLS.name] || '-'}</td>
+      <td>${r[COLS.qty] || 0}</td>
+      <td>${r[COLS.th] || 5}</td>
+      <td>${r[COLS.wh] || '-'}</td>
+      <td>${r[COLS.loc] || '-'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center text-muted">無低庫存物料</td></tr>';
+  
+  // 更新分頁資訊
+  document.getElementById('pageInfo').textContent = 
+    totalPages > 0 ? `第 ${currentPage} 頁，共 ${totalPages} 頁 (總計 ${lowStockData.length} 筆)` : '無資料';
+  document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+  document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+}
+
+// 渲染搜尋結果
+function renderSearchResults(){
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value;
   const locF = document.getElementById('locationFilter').value;
-  let list = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> (r[c]||'').toLowerCase().includes(kw));
-    const matchWh = !whF || r[COLS.wh]===whF;
-    const matchLoc = !locF || r[COLS.loc]===locF;
-    return matchKw && matchWh && matchLoc && (parseInt(r[COLS.qty]) <= parseInt(r[COLS.th]||5));
+  
+  // 如果沒有任何搜尋條件，隱藏搜尋結果
+  if(!kw && !whF && !locF){
+    document.getElementById('searchResultsContainer').style.display = 'none';
+    return;
+  }
+  
+  let results = rawData.slice(1).filter(r=>{
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
+      (r[c] || '').toString().toLowerCase().includes(kw));
+    const matchWh = !whF || r[COLS.wh] === whF;
+    const matchLoc = !locF || r[COLS.loc] === locF;
+    return matchKw && matchWh && matchLoc;
   });
-  const tbody = document.getElementById('lowStockTable');
-  tbody.innerHTML = list.slice(0,5).map(r=>`
-    <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
-      <td>${r[COLS.name]}</td>
-      <td>${r[COLS.qty]}</td>
-      <td>${r[COLS.th]}</td>
-      <td>${r[COLS.wh]}</td>
-      <td>${r[COLS.loc]}</td>
-    </tr>
-  `).join('') || '<tr><td colspan="5" class="text-center text-muted">無資料</td></tr>';
+  
+  const container = document.getElementById('searchResultsContainer');
+  const tbody = document.getElementById('searchResultsTable');
+  
+  if(results.length > 0){
+    container.style.display = 'block';
+    tbody.innerHTML = results.slice(0, 20).map(r=>`
+      <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5)?'low-stock':''}">
+        <td>${r[COLS.name] || '-'}</td>
+        <td>${r[COLS.qty] || 0}</td>
+        <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.loc] || '-'}</td>
+        <td><small>${r[COLS.sn] || '-'}</small></td>
+        <td><small>${r[COLS.note] || '-'}</small></td>
+      </tr>
+    `).join('');
+    if(results.length > 20){
+      tbody.innerHTML += `<tr><td colspan="6" class="text-center text-muted">還有 ${results.length - 20} 筆資料...</td></tr>`;
+    }
+  } else {
+    container.style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">查無符合條件的資料</td></tr>';
+  }
 }
 
-// 掃碼功能
+// 改進的條碼掃描功能
 function startScanner(targetId){
   currentScanTarget = targetId;
-  document.getElementById('barcodeScanner').style.display='block';
-  Quagga.init({
-    inputStream:{ type:"LiveStream", target:document.querySelector('#video'), constraints:{facingMode:"environment"} },
-    decoder:{ readers:["code_128_reader","ean_reader","ean_8_reader"] }
-  },err=>{ if(err){alert(err);stopScanner();return;} Quagga.start(); });
-  Quagga.onDetected(res=>{
-    document.getElementById(currentScanTarget).value = res.codeResult.code;
+  const scanner = document.getElementById('barcodeScanner');
+  scanner.style.display = 'flex';
+  
+  // 初始化攝影機
+  navigator.mediaDevices.getUserMedia({ 
+    video: { 
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 480 }
+    } 
+  }).then(stream => {
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.play();
+    
+    // 初始化 Quagga
+    Quagga.init({
+      inputStream: {
+        type: "LiveStream",
+        target: video,
+        constraints: {
+          width: 640,
+          height: 480,
+          facingMode: "environment"
+        }
+      },
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      },
+      numOfWorkers: 2,
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader", 
+          "ean_8_reader",
+          "code_39_reader"
+        ]
+      },
+      locate: true
+    }, err => {
+      if (err) {
+        console.error("Quagga初始化失敗:", err);
+        alert("無法啟動條碼掃描器：" + err.message);
+        stopScanner();
+        return;
+      }
+      Quagga.start();
+    });
+    
+    // 掃描結果處理
+    Quagga.onDetected(result => {
+      const code = result.codeResult.code;
+      document.getElementById(currentScanTarget).value = code;
+      
+      // 提供視覺回饋
+      navigator.vibrate && navigator.vibrate(200);
+      
+      setTimeout(() => {
+        stopScanner();
+        // 聚焦到下一個輸入框
+        const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
+        if(nextInput && nextInput.querySelector('input')){
+          nextInput.querySelector('input').focus();
+        }
+      }, 1000);
+    });
+    
+  }).catch(err => {
+    console.error("無法存取攝影機:", err);
+    alert("無法開啟攝影機，請確認權限設定");
     stopScanner();
   });
 }
-function stopScanner(){ Quagga.stop(); document.getElementById('barcodeScanner').style.display='none'; currentScanTarget=null; }
+
+function stopScanner(){
+  Quagga.stop();
+  const video = document.getElementById('video');
+  if(video.srcObject){
+    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+  }
+  document.getElementById('barcodeScanner').style.display = 'none';
+  currentScanTarget = null;
+}
 
 // 入庫
-document.getElementById('inBtn').onclick=async()=>{
+document.getElementById('inBtn').onclick = async () => {
   const payload = {
-    action:"add",
-    name:in_name.value.trim(),
-    qty:in_qty.value.trim(),
-    warehouse:in_wh.value.trim(),
-    location:in_loc.value.trim(),
-    sn:in_sn.value.trim(),
-    note:in_note.value.trim(),
-    threshold:in_threshold.value.trim()
+    action: "add",
+    name: document.getElementById('in_name').value.trim(),
+    qty: document.getElementById('in_qty').value.trim(),
+    warehouse: document.getElementById('in_wh').value.trim(),
+    location: document.getElementById('in_loc').value.trim(),
+    sn: document.getElementById('in_sn').value.trim(),
+    note: document.getElementById('in_note').value.trim(),
+    threshold: document.getElementById('in_threshold').value.trim() || "5"
   };
-  if(!payload.name||!payload.qty){alert("名稱與數量必填");return;}
-  await fetch(API_URL,{method:"POST",body:JSON.stringify(payload)});
-  loadData();
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    // 清空表單
+    ['in_name', 'in_qty', 'in_wh', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("入庫成功！");
+  } catch (e) {
+    alert("入庫失敗：" + e.message);
+  }
 };
 
 // 出庫
-document.getElementById('outBtn').onclick=async()=>{
+document.getElementById('outBtn').onclick = async () => {
   const payload = {
-    action:"delete",
-    name:out_name.value.trim(),
-    qty:out_qty.value.trim(),
-    warehouse:out_wh.value.trim(),
-    location:out_loc.value.trim(),
-    sn:out_sn.value.trim()
+    action: "delete",
+    name: document.getElementById('out_name').value.trim(),
+    qty: document.getElementById('out_qty').value.trim(),
+    warehouse: document.getElementById('out_wh').value.trim(),
+    location: document.getElementById('out_loc').value.trim(),
+    sn: document.getElementById('out_sn').value.trim()
   };
-  if(!payload.name||!payload.qty){alert("名稱與數量必填");return;}
-  await fetch(API_URL,{method:"POST",body:JSON.stringify(payload)});
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    // 清空表單
+    ['out_name', 'out_qty', 'out_wh', 'out_loc', 'out_sn']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("出庫成功！");
+  } catch (e) {
+    alert("出庫失敗：" + e.message);
+  }
+};
+
+// 事件綁定
+document.getElementById('search').oninput = renderSearchResults;
+document.getElementById('warehouseFilter').onchange = renderSearchResults;
+document.getElementById('locationFilter').onchange = renderSearchResults;
+document.getElementById('refreshBtn').onclick = () => {
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
   loadData();
 };
 
-// 事件
-document.getElementById('search').oninput=renderLowStock;
-document.getElementById('warehouseFilter').onchange=renderLowStock;
-document.getElementById('locationFilter').onchange=renderLowStock;
-document.getElementById('refreshBtn').onclick=()=>{
-  search.value=''; warehouseFilter.value=''; locationFilter.value='';
-  loadData();
+document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick = stopScanner;
+
+// 分頁控制
+document.getElementById('prevPageBtn').onclick = () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderLowStock();
+  }
 };
-document.getElementById('scanInSnBtn').onclick=()=>startScanner('in_sn');
-document.getElementById('scanOutSnBtn').onclick=()=>startScanner('out_sn');
-document.getElementById('closeScannerBtn').onclick=stopScanner;
+
+document.getElementById('nextPageBtn').onclick = () => {
+  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderLowStock();
+  }
+};
 
 // 初始化
 loadData();
+
+// 防止頁面刷新時攝影機未正確關閉
+window.addEventListener('beforeunload', stopScanner);
 </script>
 </body>
 </html>
