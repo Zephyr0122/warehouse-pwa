@@ -125,10 +125,13 @@
         <h5>🔍 查詢</h5>
         <div class="d-flex gap-2 mb-3">
             <input id="search" class="form-control small-input" placeholder="搜尋">
-            <select id="warehouseFilter" class="form-select small-input">
+            <select id="warehouseFilter" class="form-select small-input" multiple>
                 <option value="">全部倉庫</option>
             </select>
-            <select id="locationFilter" class="form-select small-input">
+            <select id="locationTypeFilter" class="form-select small-input" multiple>
+                <option value="">全部地點</option>
+            </select>
+            <select id="locationFilter" class="form-select small-input" multiple>
                 <option value="">全部位置</option>
             </select>
             <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
@@ -146,11 +149,21 @@
             <table class="table table-sm table-striped">
               <thead class="table-primary">
                 <tr>
-                  <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th>
+                  <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
                 </tr>
               </thead>
               <tbody id="searchResultsTable"></tbody>
             </table>
+          </div>
+          <!-- 查詢結果分頁控制 -->
+          <div class="pagination-controls">
+            <button id="searchPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              <i class="fas fa-chevron-left"></i> 上一頁
+            </button>
+            <span id="searchPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+            <button id="searchNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              下一頁 <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -164,6 +177,7 @@
           <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
         </div>
         <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="in_locType" class="form-control small-input mb-2" placeholder="地點">
         <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
         <div class="input-group mb-2">
           <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
@@ -179,6 +193,7 @@
         <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
         <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
         <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="out_locType" class="form-control small-input mb-2" placeholder="地點">
         <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
         <div class="input-group mb-2">
           <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
@@ -199,7 +214,7 @@
           <table class="table table-sm table-striped">
             <thead class="table-dark">
               <tr>
-                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>位置</th>
+                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
               </tr>
             </thead>
             <tbody id="lowStockTable"></tbody>
@@ -249,7 +264,7 @@
             <input id="historyDateEnd" type="date" class="form-control small-input">
           </div>
           <div class="col-md-2">
-            <select id="historyWarehouse" class="form-select small-input">
+            <select id="historyWarehouse" class="form-select small-input" multiple>
               <option value="">全部倉庫</option>
             </select>
           </div>
@@ -306,15 +321,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
-const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
+const COLS = { id:0, name:1, qty:2, wh:3, locType:4, loc:5, sn:6, note:7, th:8, date:9 };
 let rawData = [];
 let historyData = [];
 let currentScanTarget = null;
 let lowStockData = [];
+let searchResults = []; // 新增：搜尋結果資料
 let currentPage = 1;
 let currentHistoryPage = 1;
+let currentSearchPage = 1; // 新增：搜尋結果分頁
 const itemsPerPage = 5;
 const historyItemsPerPage = 10;
+const searchItemsPerPage = 10; // 新增：搜尋結果每頁顯示數量
 
 // 讀取資料
 async function loadData(){
@@ -348,16 +366,23 @@ async function loadHistoryData(){
 }
 
 function renderFilters(){
-  const whSet = new Set(), locSet = new Set();
+  const whSet = new Set(), locTypeSet = new Set(), locSet = new Set();
   rawData.slice(1).forEach(r=>{
     if(r[COLS.wh]) whSet.add(r[COLS.wh]);
+    if(r[COLS.locType]) locTypeSet.add(r[COLS.locType]);
     if(r[COLS.loc]) locSet.add(r[COLS.loc]);
   });
+  
   const whSel = document.getElementById('warehouseFilter');
+  const locTypeSel = document.getElementById('locationTypeFilter');
   const locSel = document.getElementById('locationFilter');
+  
   whSel.innerHTML = '<option value="">全部倉庫</option>';
+  locTypeSel.innerHTML = '<option value="">全部地點</option>';
   locSel.innerHTML = '<option value="">全部位置</option>';
+  
   Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
+  Array.from(locTypeSet).sort().forEach(lt=> locTypeSel.innerHTML += `<option value="${lt}">${lt}</option>`);
   Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
 }
 
@@ -399,9 +424,10 @@ function renderLowStock(){
       <td>${r[COLS.qty] || 0}</td>
       <td>${r[COLS.th] || 5}</td>
       <td>${r[COLS.wh] || '-'}</td>
+      <td>${r[COLS.locType] || '-'}</td>
       <td>${r[COLS.loc] || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="5" class="text-center text-muted">無低庫存物料</td></tr>';
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted">無低庫存物料</td></tr>';
   
   // 更新分頁資訊
   document.getElementById('pageInfo').textContent = 
@@ -523,47 +549,82 @@ function renderHistory(){
   document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
 }
 
-// 渲染搜尋結果
+// 獲取選擇框的選中值（支援複選）
+function getSelectedValues(selectId) {
+  const select = document.getElementById(selectId);
+  const values = [];
+  for (let option of select.selectedOptions) {
+    if (option.value !== '') {
+      values.push(option.value);
+    }
+  }
+  return values;
+}
+
+// 渲染搜尋結果（新增分頁功能）
 function renderSearchResults(){
   const kw = document.getElementById('search').value.trim().toLowerCase();
-  const whF = document.getElementById('warehouseFilter').value;
-  const locF = document.getElementById('locationFilter').value;
+  const whF = getSelectedValues('warehouseFilter');
+  const locTypeF = getSelectedValues('locationTypeFilter');
+  const locF = getSelectedValues('locationFilter');
   
   // 如果沒有任何搜尋條件，隱藏搜尋結果
-  if(!kw && !whF && !locF){
+  if(!kw && whF.length === 0 && locTypeF.length === 0 && locF.length === 0){
     document.getElementById('searchResultsContainer').style.display = 'none';
     return;
   }
   
-  let results = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
+  // 篩選結果
+  searchResults = rawData.slice(1).filter(r=>{
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.locType,COLS.loc,COLS.note].some(c=> 
       (r[c] || '').toString().toLowerCase().includes(kw));
-    const matchWh = !whF || r[COLS.wh] === whF;
-    const matchLoc = !locF || r[COLS.loc] === locF;
-    return matchKw && matchWh && matchLoc;
+    const matchWh = whF.length === 0 || whF.includes(r[COLS.wh]);
+    const matchLocType = locTypeF.length === 0 || locTypeF.includes(r[COLS.locType]);
+    const matchLoc = locF.length === 0 || locF.includes(r[COLS.loc]);
+    return matchKw && matchWh && matchLocType && matchLoc;
   });
   
+  currentSearchPage = 1; // 重置搜尋分頁
+  renderSearchResultsPage();
+}
+
+// 渲染搜尋結果分頁
+function renderSearchResultsPage() {
   const container = document.getElementById('searchResultsContainer');
   const tbody = document.getElementById('searchResultsTable');
   
-  if(results.length > 0){
+  if(searchResults.length > 0){
     container.style.display = 'block';
-    tbody.innerHTML = results.slice(0, 20).map(r=>`
+    
+    // 分頁處理
+    const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
+    const startIndex = (currentSearchPage - 1) * searchItemsPerPage;
+    const endIndex = startIndex + searchItemsPerPage;
+    const pageData = searchResults.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = pageData.map(r=>`
       <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5)?'low-stock':''}">
         <td>${r[COLS.name] || '-'}</td>
         <td>${r[COLS.qty] || 0}</td>
         <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.locType] || '-'}</td>
         <td>${r[COLS.loc] || '-'}</td>
         <td><small>${r[COLS.sn] || '-'}</small></td>
         <td><small>${r[COLS.note] || '-'}</small></td>
       </tr>
     `).join('');
-    if(results.length > 20){
-      tbody.innerHTML += `<tr><td colspan="6" class="text-center text-muted">還有 ${results.length - 20} 筆資料...</td></tr>`;
-    }
+    
+    // 更新分頁資訊
+    document.getElementById('searchPageInfo').textContent = 
+      totalPages > 0 ? `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)` : '無資料';
+    document.getElementById('searchPrevBtn').disabled = currentSearchPage <= 1;
+    document.getElementById('searchNextBtn').disabled = currentSearchPage >= totalPages;
   } else {
     container.style.display = 'block';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">查無符合條件的資料</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
+    document.getElementById('searchPageInfo').textContent = '無資料';
+    document.getElementById('searchPrevBtn').disabled = true;
+    document.getElementById('searchNextBtn').disabled = true;
   }
 }
 
@@ -592,28 +653,17 @@ function exportToCSV(data, filename, headers) {
 
 // 匯出搜尋結果
 function exportSearchResults() {
-  const kw = document.getElementById('search').value.trim().toLowerCase();
-  const whF = document.getElementById('warehouseFilter').value;
-  const locF = document.getElementById('locationFilter').value;
-  
-  let results = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
-      (r[c] || '').toString().toLowerCase().includes(kw));
-    const matchWh = !whF || r[COLS.wh] === whF;
-    const matchLoc = !locF || r[COLS.loc] === locF;
-    return matchKw && matchWh && matchLoc;
-  });
-  
-  if(results.length === 0) {
+  if(searchResults.length === 0) {
     alert('沒有資料可匯出');
     return;
   }
   
-  const headers = ['物料名稱', '數量', '倉庫', '位置', '序號', '備註', '警戒值', '更新日期'];
-  const exportData = results.map(r => [
+  const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新日期'];
+  const exportData = searchResults.map(r => [
     r[COLS.name] || '',
     r[COLS.qty] || 0,
     r[COLS.wh] || '',
+    r[COLS.locType] || '',
     r[COLS.loc] || '',
     r[COLS.sn] || '',
     r[COLS.note] || '',
@@ -632,12 +682,13 @@ function exportLowStock() {
     return;
   }
   
-  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '位置', '序號', '備註', '狀態'];
+  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '地點', '位置', '序號', '備註', '狀態'];
   const exportData = lowStockData.map(r => [
     r[COLS.name] || '',
     r[COLS.qty] || 0,
     r[COLS.th] || 5,
     r[COLS.wh] || '',
+    r[COLS.locType] || '',
     r[COLS.loc] || '',
     r[COLS.sn] || '',
     r[COLS.note] || '',
@@ -791,13 +842,14 @@ function stopScanner(){
 }
 
 // 記錄出入庫歷史
-function addHistoryRecord(action, name, qty, warehouse, location, sn, note) {
+function addHistoryRecord(action, name, qty, warehouse, locationType, location, sn, note) {
   const record = {
     timestamp: new Date().toISOString(),
     action: action || '',
     material: name || '',
     quantity: parseInt(qty) || 0,
     warehouse: warehouse || '',
+    locationType: locationType || '',
     location: location || '',
     serialNumber: sn || '',
     note: note || ''
