@@ -488,8 +488,8 @@ function renderHistory(){
   } else {
     historyList.innerHTML = `
       <div class="text-center text-muted py-4">
-        <i class="fas fa-inbox fa-3x mb-3"></i>
-        <p>無符合條件的歷史紀錄</p>
+        <i class="fas fa-search fa-2x mb-3"></i>
+        <p>無此紀錄</p>
       </div>
     `;
   }
@@ -581,6 +581,11 @@ function exportSearchResults() {
     const matchLoc = !locF || r[COLS.loc] === locF;
     return matchKw && matchWh && matchLoc;
   });
+  
+  if(results.length === 0) {
+    alert('沒有資料可匯出');
+    return;
+  }
   
   const headers = ['物料名稱', '數量', '倉庫', '位置', '序號', '備註', '警戒值', '更新日期'];
   const exportData = results.map(r => [
@@ -893,11 +898,7 @@ document.getElementById('historyWarehouse').onchange = () => {
   renderHistory();
 };
 document.getElementById('historyRefreshBtn').onclick = () => {
-  document.getElementById('historySearch').value = '';
-  document.getElementById('historyAction').value = '';
-  document.getElementById('historyDateStart').value = '';
-  document.getElementById('historyDateEnd').value = '';
-  document.getElementById('historyWarehouse').value = '';
+  // 搜尋按鈕：只執行搜尋，不清除篩選條件
   currentHistoryPage = 1;
   renderHistory();
 };
@@ -911,6 +912,12 @@ document.getElementById('historyClearBtn').onclick = () => {
   document.getElementById('historyWarehouse').value = '';
   currentHistoryPage = 1;
   renderHistory();
+  
+  // 同時清除搜尋結果
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  renderSearchResults();
 };
 
 document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
