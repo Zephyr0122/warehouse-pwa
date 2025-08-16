@@ -241,9 +241,11 @@
             </select>
           </div>
           <div class="col-md-2">
+            <label class="form-label small text-muted mb-1">開始日期</label>
             <input id="historyDateStart" type="date" class="form-control small-input">
           </div>
           <div class="col-md-2">
+            <label class="form-label small text-muted mb-1">結束日期</label>
             <input id="historyDateEnd" type="date" class="form-control small-input">
           </div>
           <div class="col-md-2">
@@ -251,9 +253,12 @@
               <option value="">全部倉庫</option>
             </select>
           </div>
-          <div class="col-md-1">
-            <button id="historyRefreshBtn" class="btn btn-outline-primary big-btn w-100">
+          <div class="col-md-1 d-flex flex-column gap-1">
+            <button id="historyRefreshBtn" class="btn btn-outline-primary btn-sm" title="搜尋">
               <i class="fas fa-search"></i>
+            </button>
+            <button id="historyClearBtn" class="btn btn-outline-secondary btn-sm" title="清除所有篩選條件">
+              <i class="fas fa-times"></i>
             </button>
           </div>
         </div>
@@ -303,13 +308,13 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
 const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
 let rawData = [];
-let historyData = []; // 新增：歷史紀錄資料
+let historyData = [];
 let currentScanTarget = null;
 let lowStockData = [];
 let currentPage = 1;
-let currentHistoryPage = 1; // 新增：歷史紀錄分頁
+let currentHistoryPage = 1;
 const itemsPerPage = 5;
-const historyItemsPerPage = 10; // 新增：歷史紀錄每頁顯示數量
+const historyItemsPerPage = 10;
 
 // 讀取資料
 async function loadData(){
@@ -326,7 +331,7 @@ async function loadData(){
   }
 }
 
-// 新增：載入歷史紀錄
+// 載入歷史紀錄
 async function loadHistoryData(){
   try {
     const res = await fetch(API_URL + "?action=getHistory");
@@ -335,38 +340,11 @@ async function loadHistoryData(){
     renderHistory();
   } catch(e){ 
     console.error("讀取歷史紀錄失敗:", e);
-    // 如果無法載入歷史紀錄，使用模擬資料
-    historyData = generateMockHistoryData();
+    // 如果無法載入歷史紀錄，初始化為空陣列
+    historyData = [];
     renderHistoryFilters();
     renderHistory();
   }
-}
-
-// 新增：生成模擬歷史紀錄資料
-function generateMockHistoryData(){
-  const mockData = [];
-  const actions = ['入庫', '出�庫'];
-  const materials = ['螺絲', '螺帽', '墊片', '彈簧', '軸承'];
-  const warehouses = ['A倉', 'B倉', 'C倉'];
-  const locations = ['A1-01', 'A1-02', 'B2-01', 'B2-02', 'C3-01'];
-  
-  for(let i = 0; i < 50; i++){
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * 30));
-    
-    mockData.push({
-      timestamp: date.toISOString(),
-      action: actions[Math.floor(Math.random() * actions.length)],
-      material: materials[Math.floor(Math.random() * materials.length)],
-      quantity: Math.floor(Math.random() * 100) + 1,
-      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
-      location: locations[Math.floor(Math.random() * locations.length)],
-      serialNumber: 'SN' + Math.random().toString().substr(2, 8),
-      note: Math.random() > 0.5 ? '備註資訊' : ''
-    });
-  }
-  
-  return mockData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
 function renderFilters(){
@@ -383,7 +361,7 @@ function renderFilters(){
   Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
 }
 
-// 新增：渲染歷史紀錄篩選器
+// 渲染歷史紀錄篩選器
 function renderHistoryFilters(){
   const whSet = new Set();
   historyData.forEach(record => {
@@ -404,7 +382,7 @@ function updateLowStockData(){
     const threshold = parseInt(r[COLS.th]) || 5;
     return qty <= threshold;
   });
-  currentPage = 1; // 重置到第一頁
+  currentPage = 1;
 }
 
 // 渲染低庫存告警（分頁）
@@ -432,7 +410,7 @@ function renderLowStock(){
   document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
 }
 
-// 新增：渲染歷史紀錄
+// 渲染歷史紀錄
 function renderHistory(){
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
@@ -567,7 +545,7 @@ function renderSearchResults(){
   }
 }
 
-// 新增：CSV 匯出功能
+// CSV 匯出功能
 function exportToCSV(data, filename, headers) {
   const csvContent = [
     headers.join(','),
@@ -590,7 +568,7 @@ function exportToCSV(data, filename, headers) {
   document.body.removeChild(link);
 }
 
-// 新增：匯出搜尋結果
+// 匯出搜尋結果
 function exportSearchResults() {
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value;
@@ -603,11 +581,6 @@ function exportSearchResults() {
     const matchLoc = !locF || r[COLS.loc] === locF;
     return matchKw && matchWh && matchLoc;
   });
-  
-  if(results.length === 0) {
-    alert('沒有資料可匯出');
-    return;
-  }
   
   const headers = ['物料名稱', '數量', '倉庫', '位置', '序號', '備註', '警戒值', '更新日期'];
   const exportData = results.map(r => [
@@ -625,7 +598,7 @@ function exportSearchResults() {
   exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
 }
 
-// 新增：匯出低庫存清單
+// 匯出低庫存清單
 function exportLowStock() {
   if(lowStockData.length === 0) {
     alert('沒有低庫存資料可匯出');
@@ -648,7 +621,7 @@ function exportLowStock() {
   exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
 }
 
-// 新增：匯出歷史紀錄
+// 匯出歷史紀錄
 function exportHistory() {
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
@@ -700,3 +673,327 @@ function exportHistory() {
   const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
   exportToCSV(exportData, `出入庫歷史紀錄_${timestamp}.csv`, headers);
 }
+
+// 條碼掃描功能
+function startScanner(targetId){
+  currentScanTarget = targetId;
+  const scanner = document.getElementById('barcodeScanner');
+  scanner.style.display = 'flex';
+  
+  // 初始化攝影機
+  navigator.mediaDevices.getUserMedia({ 
+    video: { 
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 480 }
+    } 
+  }).then(stream => {
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.play();
+    
+    // 初始化 Quagga
+    Quagga.init({
+      inputStream: {
+        type: "LiveStream",
+        target: video,
+        constraints: {
+          width: 640,
+          height: 480,
+          facingMode: "environment"
+        }
+      },
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      },
+      numOfWorkers: 2,
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader", 
+          "ean_8_reader",
+          "code_39_reader"
+        ]
+      },
+      locate: true
+    }, err => {
+      if (err) {
+        console.error("Quagga初始化失敗:", err);
+        alert("無法啟動條碼掃描器：" + err.message);
+        stopScanner();
+        return;
+      }
+      Quagga.start();
+    });
+    
+    // 掃描結果處理
+    Quagga.onDetected(result => {
+      const code = result.codeResult.code;
+      document.getElementById(currentScanTarget).value = code;
+      
+      // 提供視覺回饋
+      navigator.vibrate && navigator.vibrate(200);
+      
+      setTimeout(() => {
+        stopScanner();
+        // 聚焦到下一個輸入框
+        const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
+        if(nextInput && nextInput.querySelector('input')){
+          nextInput.querySelector('input').focus();
+        }
+      }, 1000);
+    });
+    
+  }).catch(err => {
+    console.error("無法存取攝影機:", err);
+    alert("無法開啟攝影機，請確認權限設定");
+    stopScanner();
+  });
+}
+
+function stopScanner(){
+  Quagga.stop();
+  const video = document.getElementById('video');
+  if(video.srcObject){
+    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+  }
+  document.getElementById('barcodeScanner').style.display = 'none';
+  currentScanTarget = null;
+}
+
+// 記錄出入庫歷史
+function addHistoryRecord(action, name, qty, warehouse, location, sn, note) {
+  const record = {
+    timestamp: new Date().toISOString(),
+    action: action,
+    material: name,
+    quantity: parseInt(qty),
+    warehouse: warehouse || '',
+    location: location || '',
+    serialNumber: sn || '',
+    note: note || ''
+  };
+  
+  historyData.unshift(record);
+  
+  // 限制歷史紀錄數量，避免記憶體過度使用
+  if(historyData.length > 1000) {
+    historyData = historyData.slice(0, 1000);
+  }
+  
+  // 如果目前在歷史紀錄頁面，更新顯示
+  if(document.getElementById('history-tab').classList.contains('active')) {
+    renderHistory();
+  }
+}
+
+// 入庫
+document.getElementById('inBtn').onclick = async () => {
+  const payload = {
+    action: "add",
+    name: document.getElementById('in_name').value.trim(),
+    qty: document.getElementById('in_qty').value.trim(),
+    warehouse: document.getElementById('in_wh').value.trim(),
+    location: document.getElementById('in_loc').value.trim(),
+    sn: document.getElementById('in_sn').value.trim(),
+    note: document.getElementById('in_note').value.trim(),
+    threshold: document.getElementById('in_threshold').value.trim() || "5"
+  };
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    
+    // 新增歷史紀錄
+    addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, payload.note);
+    
+    // 清空表單
+    ['in_name', 'in_qty', 'in_wh', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("入庫成功！");
+  } catch (e) {
+    alert("入庫失敗：" + e.message);
+  }
+};
+
+// 出庫
+document.getElementById('outBtn').onclick = async () => {
+  const payload = {
+    action: "delete",
+    name: document.getElementById('out_name').value.trim(),
+    qty: document.getElementById('out_qty').value.trim(),
+    warehouse: document.getElementById('out_wh').value.trim(),
+    location: document.getElementById('out_loc').value.trim(),
+    sn: document.getElementById('out_sn').value.trim()
+  };
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    
+    // 新增歷史紀錄
+    addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, '');
+    
+    // 清空表單
+    ['out_name', 'out_qty', 'out_wh', 'out_loc', 'out_sn']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("出庫成功！");
+  } catch (e) {
+    alert("出庫失敗：" + e.message);
+  }
+};
+
+// 事件綁定
+document.getElementById('search').oninput = renderSearchResults;
+document.getElementById('warehouseFilter').onchange = renderSearchResults;
+document.getElementById('locationFilter').onchange = renderSearchResults;
+document.getElementById('refreshBtn').onclick = () => {
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  loadData();
+};
+
+// 匯出按鈕事件綁定
+document.getElementById('exportSearchBtn').onclick = exportSearchResults;
+document.getElementById('exportLowStockBtn').onclick = exportLowStock;
+document.getElementById('exportHistoryBtn').onclick = exportHistory;
+
+// 歷史紀錄篩選事件
+document.getElementById('historySearch').oninput = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyAction').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyDateStart').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyDateEnd').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyWarehouse').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyRefreshBtn').onclick = () => {
+  document.getElementById('historySearch').value = '';
+  document.getElementById('historyAction').value = '';
+  document.getElementById('historyDateStart').value = '';
+  document.getElementById('historyDateEnd').value = '';
+  document.getElementById('historyWarehouse').value = '';
+  currentHistoryPage = 1;
+  renderHistory();
+};
+
+// 清除所有篩選條件按鈕
+document.getElementById('historyClearBtn').onclick = () => {
+  document.getElementById('historySearch').value = '';
+  document.getElementById('historyAction').value = '';
+  document.getElementById('historyDateStart').value = '';
+  document.getElementById('historyDateEnd').value = '';
+  document.getElementById('historyWarehouse').value = '';
+  currentHistoryPage = 1;
+  renderHistory();
+};
+
+document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick = stopScanner;
+
+// 分頁控制
+document.getElementById('prevPageBtn').onclick = () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderLowStock();
+  }
+};
+
+document.getElementById('nextPageBtn').onclick = () => {
+  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderLowStock();
+  }
+};
+
+// 歷史紀錄分頁控制
+document.getElementById('historyPrevBtn').onclick = () => {
+  if (currentHistoryPage > 1) {
+    currentHistoryPage--;
+    renderHistory();
+  }
+};
+
+document.getElementById('historyNextBtn').onclick = () => {
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  // 計算篩選後的資料數量
+  let filteredData = historyData.filter(record => {
+    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      const recordDate = new Date(record.timestamp).toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if(startDate){
+        matchDate = recordDate >= startDate;
+      } else if(endDate){
+        matchDate = recordDate <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  if (currentHistoryPage < totalPages) {
+    currentHistoryPage++;
+    renderHistory();
+  }
+};
+
+// 標籤頁切換事件
+document.getElementById('history-tab').onclick = () => {
+  // 當切換到歷史紀錄頁面時，載入歷史資料
+  setTimeout(() => {
+    if(!historyData.length) {
+      loadHistoryData();
+    }
+  }, 100);
+};
+
+// 初始化
+loadData();
+
+// 防止頁面刷新時攝影機未正確關閉
+window.addEventListener('beforeunload', stopScanner);
+</script>
+</body>
+</html>
