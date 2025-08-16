@@ -418,24 +418,33 @@ function renderHistory(){
   const dateEnd = document.getElementById('historyDateEnd').value;
   const warehouse = document.getElementById('historyWarehouse').value;
   
+  console.log('歷史資料:', historyData); // 除錯用
+  
   // 篩選歷史紀錄
   let filteredData = historyData.filter(record => {
-    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    if (!record || typeof record !== 'object') return false;
+    
+    const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
     const matchAction = !action || record.action === action;
     const matchWarehouse = !warehouse || record.warehouse === warehouse;
     
     let matchDate = true;
     if(dateStart || dateEnd){
-      const recordDate = new Date(record.timestamp).toDateString();
+      if(!record.timestamp) return false;
+      
+      const recordDate = new Date(record.timestamp);
+      if(isNaN(recordDate.getTime())) return false;
+      
+      const recordDateStr = recordDate.toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
       if(startDate && endDate){
-        matchDate = recordDate >= startDate && recordDate <= endDate;
+        matchDate = recordDateStr >= startDate && recordDateStr <= endDate;
       } else if(startDate){
-        matchDate = recordDate >= startDate;
+        matchDate = recordDateStr >= startDate;
       } else if(endDate){
-        matchDate = recordDate <= endDate;
+        matchDate = recordDateStr <= endDate;
       }
     }
     
@@ -452,29 +461,42 @@ function renderHistory(){
   
   if(pageData.length > 0){
     historyList.innerHTML = pageData.map(record => {
+      // 安全檢查
+      if (!record || !record.timestamp) {
+        return '';
+      }
+      
       const date = new Date(record.timestamp);
-      const dateStr = date.toLocaleDateString('zh-TW');
-      const timeStr = date.toLocaleTimeString('zh-TW');
+      const dateStr = isNaN(date.getTime()) ? '日期錯誤' : date.toLocaleDateString('zh-TW');
+      const timeStr = isNaN(date.getTime()) ? '時間錯誤' : date.toLocaleTimeString('zh-TW');
+      
+      const action = record.action || '未知動作';
+      const material = record.material || '未知物料';
+      const quantity = record.quantity || 0;
+      const warehouse = record.warehouse || '-';
+      const location = record.location || '-';
+      const serialNumber = record.serialNumber || '';
+      const note = record.note || '';
       
       return `
-        <div class="history-record ${record.action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
+        <div class="history-record ${action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
           <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
               <div class="d-flex align-items-center mb-1">
-                <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
-                <strong>${record.action}</strong>
-                <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
-                  ${record.quantity} 件
+                <i class="fas ${action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                <strong>${action}</strong>
+                <span class="badge ${action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                  ${quantity} 件
                 </span>
               </div>
               <div class="text-muted small">
-                <div><strong>${record.material}</strong></div>
+                <div><strong>${material}</strong></div>
                 <div>
-                  <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'} 
-                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.location || '-'}
+                  <i class="fas fa-warehouse me-1"></i>${warehouse} 
+                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${location}
                 </div>
-                ${record.serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
-                ${record.note ? `<div><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
+                ${serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${serialNumber}</div>` : ''}
+                ${note ? `<div><i class="fas fa-sticky-note me-1"></i>${note}</div>` : ''}
               </div>
             </div>
             <div class="text-end text-muted small">
@@ -484,7 +506,7 @@ function renderHistory(){
           </div>
         </div>
       `;
-    }).join('');
+    }).filter(html => html).join('');
   } else {
     historyList.innerHTML = `
       <div class="text-center text-muted py-4">
@@ -772,14 +794,16 @@ function stopScanner(){
 function addHistoryRecord(action, name, qty, warehouse, location, sn, note) {
   const record = {
     timestamp: new Date().toISOString(),
-    action: action,
-    material: name,
-    quantity: parseInt(qty),
+    action: action || '',
+    material: name || '',
+    quantity: parseInt(qty) || 0,
     warehouse: warehouse || '',
     location: location || '',
     serialNumber: sn || '',
     note: note || ''
   };
+  
+  console.log('新增歷史紀錄:', record); // 除錯用
   
   historyData.unshift(record);
   
