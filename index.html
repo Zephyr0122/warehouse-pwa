@@ -123,15 +123,28 @@
       <!-- 查詢 -->
       <div class="card p-3 mb-3">
         <h5>🔍 查詢</h5>
-        <div class="d-flex gap-2 mb-3">
-            <input id="search" class="form-control small-input" placeholder="搜尋">
-            <select id="warehouseFilter" class="form-select small-input">
-                <option value="">全部倉庫</option>
-            </select>
-            <select id="locationFilter" class="form-select small-input">
-                <option value="">全部位置</option>
-            </select>
-            <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input id="search" class="form-control small-input" placeholder="搜尋物料名稱/序號">
+            </div>
+            <div class="col-md-2">
+                <select id="warehouseFilter" class="form-select small-input">
+                    <option value="">全部倉庫</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input id="locationSpotFilter" class="form-control small-input" placeholder="地點 (如: A14)">
+            </div>
+            <div class="col-md-2">
+                <select id="locationFilter" class="form-select small-input">
+                    <option value="">全部位置</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button id="refreshBtn" class="btn btn-outline-primary big-btn w-100">
+                    <i class="fas fa-sync-alt"></i> 重新整理
+                </button>
+            </div>
         </div>
         
         <!-- 查詢結果 -->
@@ -146,7 +159,7 @@
             <table class="table table-sm table-striped">
               <thead class="table-primary">
                 <tr>
-                  <th>名稱</th><th>數量</th><th>倉庫</th><th>位置</th><th>序號</th><th>備註</th>
+                  <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
                 </tr>
               </thead>
               <tbody id="searchResultsTable"></tbody>
@@ -164,7 +177,8 @@
           <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
         </div>
         <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
-        <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
+        <input id="in_spot" class="form-control small-input mb-2" placeholder="地點 (如: A14)">
+        <input id="in_loc" class="form-control small-input mb-2" placeholder="位置 (如: 層架)">
         <div class="input-group mb-2">
           <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
           <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
@@ -179,7 +193,8 @@
         <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
         <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
         <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
-        <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
+        <input id="out_spot" class="form-control small-input mb-2" placeholder="地點 (如: A14)">
+        <input id="out_loc" class="form-control small-input mb-2" placeholder="位置 (如: 層架)">
         <div class="input-group mb-2">
           <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
           <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
@@ -199,7 +214,7 @@
           <table class="table table-sm table-striped">
             <thead class="table-dark">
               <tr>
-                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>位置</th>
+                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
               </tr>
             </thead>
             <tbody id="lowStockTable"></tbody>
@@ -230,10 +245,10 @@
         
         <!-- 歷史紀錄篩選器 -->
         <div class="row mb-3">
-          <div class="col-md-3">
+          <div class="col-md-2">
             <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
           </div>
-          <div class="col-md-2">
+          <div class="col-md-1">
             <select id="historyAction" class="form-select small-input">
               <option value="">全部動作</option>
               <option value="入庫">入庫</option>
@@ -252,6 +267,9 @@
             <select id="historyWarehouse" class="form-select small-input">
               <option value="">全部倉庫</option>
             </select>
+          </div>
+          <div class="col-md-2">
+            <input id="historyLocationSpot" class="form-control small-input" placeholder="地點">
           </div>
           <div class="col-md-1 d-flex flex-column gap-1">
             <button id="historyRefreshBtn" class="btn btn-outline-primary btn-sm" title="搜尋">
@@ -305,8 +323,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
-const COLS = { id:0, name:1, qty:2, wh:3, loc:4, sn:5, note:6, th:7, date:8 };
+const API_URL = "https://script.google.com/macros/s/AKfycbwYOLK-1skqxDH-Wagf8VCMcaqehzzIMk0tiOJUKXmgelN7LXN8knkp6SNX6k3iP5gr/exec";
+const COLS = { id:0, name:1, qty:2, wh:3, spot:4, loc:5, sn:6, note:7, th:8, date:9 };
 let rawData = [];
 let historyData = [];
 let currentScanTarget = null;
@@ -348,9 +366,10 @@ async function loadHistoryData(){
 }
 
 function renderFilters(){
-  const whSet = new Set(), locSet = new Set();
+  const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   rawData.slice(1).forEach(r=>{
     if(r[COLS.wh]) whSet.add(r[COLS.wh]);
+    if(r[COLS.spot]) spotSet.add(r[COLS.spot]);
     if(r[COLS.loc]) locSet.add(r[COLS.loc]);
   });
   const whSel = document.getElementById('warehouseFilter');
@@ -358,7 +377,7 @@ function renderFilters(){
   whSel.innerHTML = '<option value="">全部倉庫</option>';
   locSel.innerHTML = '<option value="">全部位置</option>';
   Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
-  Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
+  Array.from(locSel).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
 }
 
 // 渲染歷史紀錄篩選器
@@ -399,9 +418,10 @@ function renderLowStock(){
       <td>${r[COLS.qty] || 0}</td>
       <td>${r[COLS.th] || 5}</td>
       <td>${r[COLS.wh] || '-'}</td>
+      <td>${r[COLS.spot] || '-'}</td>
       <td>${r[COLS.loc] || '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="5" class="text-center text-muted">無低庫存物料</td></tr>';
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted">無低庫存物料</td></tr>';
   
   // 更新分頁資訊
   document.getElementById('pageInfo').textContent = 
@@ -417,6 +437,7 @@ function renderHistory(){
   const dateStart = document.getElementById('historyDateStart').value;
   const dateEnd = document.getElementById('historyDateEnd').value;
   const warehouse = document.getElementById('historyWarehouse').value;
+  const locationSpot = document.getElementById('historyLocationSpot').value.trim().toLowerCase();
   
   console.log('歷史資料:', historyData); // 除錯用
   
@@ -427,6 +448,7 @@ function renderHistory(){
     const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
     const matchAction = !action || record.action === action;
     const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    const matchLocationSpot = !locationSpot || (record.locationSpot && record.locationSpot.toLowerCase().includes(locationSpot));
     
     let matchDate = true;
     if(dateStart || dateEnd){
@@ -448,7 +470,7 @@ function renderHistory(){
       }
     }
     
-    return matchSearch && matchAction && matchWarehouse && matchDate;
+    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
   // 分頁處理
@@ -474,6 +496,7 @@ function renderHistory(){
       const material = record.material || '未知物料';
       const quantity = record.quantity || 0;
       const warehouse = record.warehouse || '-';
+      const locationSpot = record.locationSpot || '-';
       const location = record.location || '-';
       const serialNumber = record.serialNumber || '';
       const note = record.note || '';
@@ -493,7 +516,8 @@ function renderHistory(){
                 <div><strong>${material}</strong></div>
                 <div>
                   <i class="fas fa-warehouse me-1"></i>${warehouse} 
-                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${location}
+                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${locationSpot}
+                  <i class="fas fa-cube ms-2 me-1"></i>${location}
                 </div>
                 ${serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${serialNumber}</div>` : ''}
                 ${note ? `<div><i class="fas fa-sticky-note me-1"></i>${note}</div>` : ''}
@@ -527,20 +551,22 @@ function renderHistory(){
 function renderSearchResults(){
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value;
+  const spotF = document.getElementById('locationSpotFilter').value.trim().toLowerCase();
   const locF = document.getElementById('locationFilter').value;
   
   // 如果沒有任何搜尋條件，隱藏搜尋結果
-  if(!kw && !whF && !locF){
+  if(!kw && !whF && !spotF && !locF){
     document.getElementById('searchResultsContainer').style.display = 'none';
     return;
   }
   
   let results = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.spot,COLS.loc,COLS.note].some(c=> 
       (r[c] || '').toString().toLowerCase().includes(kw));
     const matchWh = !whF || r[COLS.wh] === whF;
+    const matchSpot = !spotF || (r[COLS.spot] || '').toString().toLowerCase().includes(spotF);
     const matchLoc = !locF || r[COLS.loc] === locF;
-    return matchKw && matchWh && matchLoc;
+    return matchKw && matchWh && matchSpot && matchLoc;
   });
   
   const container = document.getElementById('searchResultsContainer');
@@ -553,17 +579,18 @@ function renderSearchResults(){
         <td>${r[COLS.name] || '-'}</td>
         <td>${r[COLS.qty] || 0}</td>
         <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.spot] || '-'}</td>
         <td>${r[COLS.loc] || '-'}</td>
         <td><small>${r[COLS.sn] || '-'}</small></td>
         <td><small>${r[COLS.note] || '-'}</small></td>
       </tr>
     `).join('');
     if(results.length > 20){
-      tbody.innerHTML += `<tr><td colspan="6" class="text-center text-muted">還有 ${results.length - 20} 筆資料...</td></tr>`;
+      tbody.innerHTML += `<tr><td colspan="7" class="text-center text-muted">還有 ${results.length - 20} 筆資料...</td></tr>`;
     }
   } else {
     container.style.display = 'block';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">查無符合條件的資料</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
   }
 }
 
@@ -594,14 +621,16 @@ function exportToCSV(data, filename, headers) {
 function exportSearchResults() {
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value;
+  const spotF = document.getElementById('locationSpotFilter').value.trim().toLowerCase();
   const locF = document.getElementById('locationFilter').value;
   
   let results = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.loc,COLS.note].some(c=> 
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.spot,COLS.loc,COLS.note].some(c=> 
       (r[c] || '').toString().toLowerCase().includes(kw));
     const matchWh = !whF || r[COLS.wh] === whF;
+    const matchSpot = !spotF || (r[COLS.spot] || '').toString().toLowerCase().includes(spotF);
     const matchLoc = !locF || r[COLS.loc] === locF;
-    return matchKw && matchWh && matchLoc;
+    return matchKw && matchWh && matchSpot && matchLoc;
   });
   
   if(results.length === 0) {
@@ -609,11 +638,12 @@ function exportSearchResults() {
     return;
   }
   
-  const headers = ['物料名稱', '數量', '倉庫', '位置', '序號', '備註', '警戒值', '更新日期'];
+  const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新日期'];
   const exportData = results.map(r => [
     r[COLS.name] || '',
     r[COLS.qty] || 0,
     r[COLS.wh] || '',
+    r[COLS.spot] || '',
     r[COLS.loc] || '',
     r[COLS.sn] || '',
     r[COLS.note] || '',
@@ -632,12 +662,13 @@ function exportLowStock() {
     return;
   }
   
-  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '位置', '序號', '備註', '狀態'];
+  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '地點', '位置', '序號', '備註', '狀態'];
   const exportData = lowStockData.map(r => [
     r[COLS.name] || '',
     r[COLS.qty] || 0,
     r[COLS.th] || 5,
     r[COLS.wh] || '',
+    r[COLS.spot] || '',
     r[COLS.loc] || '',
     r[COLS.sn] || '',
     r[COLS.note] || '',
@@ -655,12 +686,14 @@ function exportHistory() {
   const dateStart = document.getElementById('historyDateStart').value;
   const dateEnd = document.getElementById('historyDateEnd').value;
   const warehouse = document.getElementById('historyWarehouse').value;
+  const locationSpot = document.getElementById('historyLocationSpot').value.trim().toLowerCase();
   
   // 篩選歷史紀錄
   let filteredData = historyData.filter(record => {
     const matchSearch = !search || record.material.toLowerCase().includes(search);
     const matchAction = !action || record.action === action;
     const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    const matchLocationSpot = !locationSpot || (record.locationSpot && record.locationSpot.toLowerCase().includes(locationSpot));
     
     let matchDate = true;
     if(dateStart || dateEnd){
@@ -677,7 +710,7 @@ function exportHistory() {
       }
     }
     
-    return matchSearch && matchAction && matchWarehouse && matchDate;
+    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
   if(filteredData.length === 0) {
@@ -685,13 +718,14 @@ function exportHistory() {
     return;
   }
   
-  const headers = ['日期時間', '動作', '物料名稱', '數量', '倉庫', '位置', '序號', '備註'];
+  const headers = ['日期時間', '動作', '物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註'];
   const exportData = filteredData.map(record => [
     new Date(record.timestamp).toLocaleString('zh-TW'),
     record.action,
     record.material,
     record.quantity,
     record.warehouse || '',
+    record.locationSpot || '',
     record.location || '',
     record.serialNumber || '',
     record.note || ''
@@ -791,13 +825,14 @@ function stopScanner(){
 }
 
 // 記錄出入庫歷史
-function addHistoryRecord(action, name, qty, warehouse, location, sn, note) {
+function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, sn, note) {
   const record = {
     timestamp: new Date().toISOString(),
     action: action || '',
     material: name || '',
     quantity: parseInt(qty) || 0,
     warehouse: warehouse || '',
+    locationSpot: locationSpot || '',
     location: location || '',
     serialNumber: sn || '',
     note: note || ''
@@ -825,6 +860,7 @@ document.getElementById('inBtn').onclick = async () => {
     name: document.getElementById('in_name').value.trim(),
     qty: document.getElementById('in_qty').value.trim(),
     warehouse: document.getElementById('in_wh').value.trim(),
+    locationSpot: document.getElementById('in_spot').value.trim(),
     location: document.getElementById('in_loc').value.trim(),
     sn: document.getElementById('in_sn').value.trim(),
     note: document.getElementById('in_note').value.trim(),
@@ -840,10 +876,10 @@ document.getElementById('inBtn').onclick = async () => {
     await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
     
     // 新增歷史紀錄
-    addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, payload.note);
+    addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, payload.note);
     
     // 清空表單
-    ['in_name', 'in_qty', 'in_wh', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
+    ['in_name', 'in_qty', 'in_wh', 'in_spot', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
       .forEach(id => document.getElementById(id).value = '');
     await loadData();
     alert("入庫成功！");
@@ -859,6 +895,7 @@ document.getElementById('outBtn').onclick = async () => {
     name: document.getElementById('out_name').value.trim(),
     qty: document.getElementById('out_qty').value.trim(),
     warehouse: document.getElementById('out_wh').value.trim(),
+    locationSpot: document.getElementById('out_spot').value.trim(),
     location: document.getElementById('out_loc').value.trim(),
     sn: document.getElementById('out_sn').value.trim()
   };
@@ -872,10 +909,10 @@ document.getElementById('outBtn').onclick = async () => {
     await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
     
     // 新增歷史紀錄
-    addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, '');
+    addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, '');
     
     // 清空表單
-    ['out_name', 'out_qty', 'out_wh', 'out_loc', 'out_sn']
+    ['out_name', 'out_qty', 'out_wh', 'out_spot', 'out_loc', 'out_sn']
       .forEach(id => document.getElementById(id).value = '');
     await loadData();
     alert("出庫成功！");
@@ -887,10 +924,12 @@ document.getElementById('outBtn').onclick = async () => {
 // 事件綁定
 document.getElementById('search').oninput = renderSearchResults;
 document.getElementById('warehouseFilter').onchange = renderSearchResults;
+document.getElementById('locationSpotFilter').oninput = renderSearchResults;
 document.getElementById('locationFilter').onchange = renderSearchResults;
 document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationSpotFilter').value = '';
   document.getElementById('locationFilter').value = '';
   loadData();
 };
@@ -921,6 +960,10 @@ document.getElementById('historyWarehouse').onchange = () => {
   currentHistoryPage = 1;
   renderHistory();
 };
+document.getElementById('historyLocationSpot').oninput = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
 document.getElementById('historyRefreshBtn').onclick = () => {
   // 搜尋按鈕：只執行搜尋，不清除篩選條件
   currentHistoryPage = 1;
@@ -934,12 +977,14 @@ document.getElementById('historyClearBtn').onclick = () => {
   document.getElementById('historyDateStart').value = '';
   document.getElementById('historyDateEnd').value = '';
   document.getElementById('historyWarehouse').value = '';
+  document.getElementById('historyLocationSpot').value = '';
   currentHistoryPage = 1;
   renderHistory();
   
   // 同時清除搜尋結果
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationSpotFilter').value = '';
   document.getElementById('locationFilter').value = '';
   renderSearchResults();
 };
@@ -978,12 +1023,14 @@ document.getElementById('historyNextBtn').onclick = () => {
   const dateStart = document.getElementById('historyDateStart').value;
   const dateEnd = document.getElementById('historyDateEnd').value;
   const warehouse = document.getElementById('historyWarehouse').value;
+  const locationSpot = document.getElementById('historyLocationSpot').value.trim().toLowerCase();
   
   // 計算篩選後的資料數量
   let filteredData = historyData.filter(record => {
     const matchSearch = !search || record.material.toLowerCase().includes(search);
     const matchAction = !action || record.action === action;
     const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    const matchLocationSpot = !locationSpot || (record.locationSpot && record.locationSpot.toLowerCase().includes(locationSpot));
     
     let matchDate = true;
     if(dateStart || dateEnd){
@@ -1000,7 +1047,7 @@ document.getElementById('historyNextBtn').onclick = () => {
       }
     }
     
-    return matchSearch && matchAction && matchWarehouse && matchDate;
+    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
   const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
