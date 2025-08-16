@@ -587,4 +587,54 @@ function renderSearchResults(){
   
   // 篩選結果
   searchResults = rawData.slice(1).filter(r=>{
-    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.locType,COLS.loc,COLS.note].some(c=>
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.locType,COLS.loc,COLS.note].some(c=> 
+      (r[c] || '').toString().toLowerCase().includes(kw));
+    const matchWh = whF.length === 0 || whF.includes(r[COLS.wh]);
+    const matchLocType = locTypeF.length === 0 || locTypeF.includes(r[COLS.locType]);
+    const matchLoc = locF.length === 0 || locF.includes(r[COLS.loc]);
+    return matchKw && matchWh && matchLocType && matchLoc;
+  });
+  
+  currentSearchPage = 1;
+  renderSearchResultsPage();
+}
+
+// 渲染搜尋結果分頁
+function renderSearchResultsPage() {
+  const container = document.getElementById('searchResultsContainer');
+  const tbody = document.getElementById('searchResultsTable');
+  
+  if(searchResults.length > 0){
+    container.style.display = 'block';
+    
+    // 分頁處理
+    const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
+    const startIndex = (currentSearchPage - 1) * searchItemsPerPage;
+    const endIndex = startIndex + searchItemsPerPage;
+    const pageData = searchResults.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = pageData.map(r=>`
+      <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5) ? (parseInt(r[COLS.qty])===0 ? 'out-of-stock' : 'low-stock') : ''}">
+        <td><strong>${r[COLS.name] || '-'}</strong></td>
+        <td><span class="badge ${parseInt(r[COLS.qty])===0 ? 'bg-danger' : parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5) ? 'bg-warning text-dark' : 'bg-success'}">${r[COLS.qty] || 0}</span></td>
+        <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.locType] || '-'}</td>
+        <td>${r[COLS.loc] || '-'}</td>
+        <td><small class="text-muted">${r[COLS.sn] || '-'}</small></td>
+        <td><small class="text-muted">${r[COLS.note] || '-'}</small></td>
+      </tr>
+    `).join('');
+    
+    // 更新分頁資訊
+    document.getElementById('searchPageInfo').textContent = 
+      totalPages > 0 ? `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)` : '無資料';
+    document.getElementById('searchPrevBtn').disabled = currentSearchPage <= 1;
+    document.getElementById('searchNextBtn').disabled = currentSearchPage >= totalPages;
+  } else {
+    container.style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3"><i class="fas fa-search me-2"></i>查無符合條件的資料</td></tr>';
+    document.getElementById('searchPageInfo').textContent = '無資料';
+    document.getElementById('searchPrevBtn').disabled = true;
+    document.getElementById('searchNextBtn').disabled = true;
+  }
+}
