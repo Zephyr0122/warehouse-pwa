@@ -1,1714 +1,1181 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>倉庫物料管理（PWA）</title>
-<link rel="manifest" href="manifest.json">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<style>
-  body { -webkit-tap-highlight-color: transparent; }
-  .big-btn { padding: .65rem; font-size: 1rem; }
-  .small-input { padding: .45rem .6rem; font-size: .95rem; }
-  .low-stock { background-color: #fff3cd !important; }
-  .out-of-stock { background-color: #f8d7da !important; }
-  .scroll-table { max-height: 250px; overflow-y: auto; }
-  
-  /* 智能建議下拉選單樣式 */
-  .suggestion-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 0 0 0.375rem 0.375rem;
-    border-top: none;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    display: none;
-  }
-  
-  .suggestion-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    border-bottom: 1px solid #f8f9fa;
-    transition: background-color 0.2s;
-  }
-  
-  .suggestion-item:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .suggestion-item.active {
-    background-color: #e3f2fd;
-  }
-  
-  .suggestion-item:last-child {
-    border-bottom: none;
-  }
-  
-  .suggestion-name {
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .suggestion-info {
-    font-size: 0.85rem;
-    color: #6c757d;
-    margin-top: 2px;
-  }
-  
-  .suggestion-location {
-    font-size: 0.8rem;
-    color: #28a745;
-    margin-top: 1px;
-  }
-  
-  .suggestion-stock {
-    font-size: 0.8rem;
-    color: #007bff;
-    float: right;
-  }
-  
-  /* 輸入框容器樣式調整 */
-  .input-container {
-    position: relative;
-  }
-  
-  .input-container input {
-    border-radius: 0.375rem;
-  }
-  
-  .input-container.has-suggestions input {
-    border-radius: 0.375rem 0.375rem 0 0;
-  }
-  
-  /* 條碼掃描器樣式優化 */
-  .barcode-scanner { 
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.95); z-index: 9999; display: none;
-    justify-content: center; align-items: center; flex-direction: column;
-  }
-  #video { 
-    width: 90%; max-width: 400px; height: auto;
-    border: 2px solid #28a745; border-radius: 10px;
-    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
-  }
-  .scanner-overlay {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 250px; height: 150px;
-    border: 2px solid #28a745;
-    border-radius: 10px;
-    pointer-events: none;
-  }
-  .scanner-corner {
-    position: absolute; width: 20px; height: 20px;
-    border: 3px solid #28a745;
-  }
-  .scanner-corner.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
-  .scanner-corner.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
-  .scanner-corner.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
-  .scanner-corner.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
-  
-  .scanner-info {
-    color: white; text-align: center; margin-top: 20px;
-    font-size: 1.1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-  }
-  
-  /* 查詢結果區域 */
-  .search-results { max-height: 300px; overflow-y: auto; }
-  
-  /* 分頁按鈕 */
-  .pagination-controls {
-    display: flex; justify-content: center; align-items: center; gap: 10px;
-    margin-top: 10px;
-  }
-  .page-info {
-    font-size: 0.9rem; color: #6c757d;
-    min-width: 120px; text-align: center;
-  }
-  
-  /* 歷史紀錄樣式 */
-  .history-record {
-    border-left: 3px solid #007bff;
-    padding-left: 10px;
-    margin-bottom: 8px;
-  }
-  .history-record.in {
-    border-left-color: #28a745;
-  }
-  .history-record.out {
-    border-left-color: #dc3545;
-  }
-  
-  /* 匯出按鈕樣式 */
-  .export-btn {
-    background: linear-gradient(135deg, #17a2b8, #138496);
-    border: none;
-    color: white;
-    transition: all 0.3s ease;
-  }
-  .export-btn:hover {
-    background: linear-gradient(135deg, #138496, #117a8b);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  }
-  
-  /* 標籤頁樣式 */
-  .nav-tabs .nav-link {
-    border-radius: 8px 8px 0 0;
-    margin-right: 2px;
-  }
-  .nav-tabs .nav-link.active {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border-color: #007bff;
-    color: white !important;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倉庫物料管理系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+        }
+        
+        .nav-pills .nav-link {
+            border-radius: 15px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 2px solid transparent;
+        }
+        
+        .nav-pills .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            color: white !important;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .btn {
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            border: none;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .table {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+        
+        .low-stock {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7) !important;
+            animation: pulse 2s infinite;
+        }
+        
+        .out-of-stock {
+            background: linear-gradient(135deg, #f8d7da, #fab1a0) !important;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .suggestion-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .suggestion-item:hover, .suggestion-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            transform: translateX(5px);
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .history-item {
+            border-left: 4px solid;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .history-item.in { border-left-color: #28a745; }
+        .history-item.out { border-left-color: #dc3545; }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-light">
-<div class="container py-3">
-  <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
-
-  <!-- 主要功能標籤頁 -->
-  <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button" role="tab">
-        <i class="fas fa-boxes"></i> 物料管理
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-        <i class="fas fa-history"></i> 歷史紀錄
-      </button>
-    </li>
-  </ul>
-
-  <div class="tab-content" id="mainTabsContent">
-    <!-- 物料管理頁面 -->
-    <div class="tab-pane fade show active" id="management" role="tabpanel">
-      <!-- 查詢 -->
-      <div class="card p-3 mb-3">
-        <h5>🔍 查詢</h5>
-        <div class="row g-2 mb-3">
-            <div class="col-md-3">
-                <input id="search" class="form-control small-input" placeholder="搜尋物料名稱/序號">
-            </div>
-            <div class="col-md-2">
-                <select id="warehouseFilter" class="form-select small-input">
-                    <option value="">全部倉庫</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="locationSpotFilter" class="form-select small-input">
-                    <option value="">全部地點</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="locationFilter" class="form-select small-input">
-                    <option value="">全部位置</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button id="refreshBtn" class="btn btn-outline-primary big-btn w-100">
-                    <i class="fas fa-sync-alt"></i> 重新整理
-                </button>
-            </div>
-        </div>
-        
-        <!-- 查詢結果 -->
-        <div id="searchResultsContainer" style="display: none;">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
-            <button id="exportSearchBtn" class="btn btn-sm export-btn">
-              <i class="fas fa-download"></i> 匯出CSV
-            </button>
-          </div>
-          <div class="search-results">
-            <table class="table table-sm table-striped">
-              <thead class="table-primary">
-                <tr>
-                  <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
-                </tr>
-              </thead>
-              <tbody id="searchResultsTable"></tbody>
-            </table>
-          </div>
-          <!-- 查詢結果分頁控制 -->
-          <div class="pagination-controls">
-            <button id="searchPrevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-              <i class="fas fa-chevron-left"></i> 上一頁
-            </button>
-            <span id="searchPageInfo" class="page-info">第 1 頁，共 1 頁</span>
-            <button id="searchNextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-              下一頁 <i class="fas fa-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 入庫 -->
-      <div class="card p-3 mb-3">
-        <h5>➕ 入庫</h5>
-        <div class="input-container mb-2">
-          <input id="in_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off">
-          <div id="in_name_suggestions" class="suggestion-dropdown"></div>
-        </div>
-        <div class="input-group mb-2">
-          <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
-          <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
-        </div>
-        <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
-        <input id="in_spot" class="form-control small-input mb-2" placeholder="地點 (如: A14)">
-        <input id="in_loc" class="form-control small-input mb-2" placeholder="位置 (如: 層架)">
-        <div class="input-group mb-2">
-          <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
-          <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
-        </div>
-        <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
-        <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
-      </div>
-
-      <!-- 出庫 -->
-      <div class="card p-3 mb-3">
-        <h5>➖ 出庫</h5>
-        <div class="input-container mb-2">
-          <input id="out_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off">
-          <div id="out_name_suggestions" class="suggestion-dropdown"></div>
-        </div>
-        <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
-        <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
-        <input id="out_spot" class="form-control small-input mb-2" placeholder="地點 (如: A14)">
-        <input id="out_loc" class="form-control small-input mb-2" placeholder="位置 (如: 層架)">
-        <div class="input-group mb-2">
-          <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
-          <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
-        </div>
-        <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
-      </div>
-
-      <!-- 低庫存告警 -->
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
-          <button id="exportLowStockBtn" class="btn btn-sm export-btn">
-            <i class="fas fa-download"></i> 匯出低庫存清單
-          </button>
-        </div>
-        <div class="scroll-table">
-          <table class="table table-sm table-striped">
-            <thead class="table-dark">
-              <tr>
-                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
-              </tr>
-            </thead>
-            <tbody id="lowStockTable"></tbody>
-          </table>
-        </div>
-        <!-- 低庫存分頁控制 -->
-        <div class="pagination-controls">
-          <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-            <i class="fas fa-chevron-left"></i> 上一頁
-          </button>
-          <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
-          <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-            下一頁 <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 歷史紀錄頁面 -->
-    <div class="tab-pane fade" id="history" role="tabpanel">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5><i class="fas fa-history text-info"></i> 出入庫歷史紀錄</h5>
-          <button id="exportHistoryBtn" class="btn btn-sm export-btn">
-            <i class="fas fa-download"></i> 匯出歷史紀錄
-          </button>
-        </div>
-        
-        <!-- 歷史紀錄篩選器 -->
-        <div class="row mb-3">
-          <div class="col-md-2">
-            <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
-          </div>
-          <div class="col-md-1">
-            <select id="historyAction" class="form-select small-input">
-              <option value="">全部動作</option>
-              <option value="入庫">入庫</option>
-              <option value="出庫">出庫</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">開始日期</label>
-            <input id="historyDateStart" type="date" class="form-control small-input">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">結束日期</label>
-            <input id="historyDateEnd" type="date" class="form-control small-input">
-          </div>
-          <div class="col-md-2">
-            <select id="historyWarehouse" class="form-select small-input">
-              <option value="">全部倉庫</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select id="historyLocationSpot" class="form-select small-input">
-              <option value="">全部地點</option>
-            </select>
-          </div>
-          <div class="col-md-1 d-flex flex-column gap-1">
-            <button id="historyRefreshBtn" class="btn btn-outline-primary btn-sm" title="搜尋">
-              <i class="fas fa-search"></i>
-            </button>
-            <button id="historyClearBtn" class="btn btn-outline-secondary btn-sm" title="清除所有篩選條件">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-        
-        <!-- 歷史紀錄列表 -->
-        <div id="historyContainer">
-          <div class="scroll-table" style="max-height: 400px;">
-            <div id="historyList"></div>
-          </div>
-          
-          <!-- 歷史紀錄分頁控制 -->
-          <div class="pagination-controls">
-            <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
-              <i class="fas fa-chevron-left"></i> 上一頁
-            </button>
-            <span id="historyPageInfo" class="page-info">第 1 頁，共 1 頁</span>
-            <button id="historyNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
-              下一頁 <i class="fas fa-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 條碼掃描器 -->
-<div id="barcodeScanner" class="barcode-scanner">
-  <video id="video" playsinline></video>
-  <div class="scanner-overlay">
-    <div class="scanner-corner top-left"></div>
-    <div class="scanner-corner top-right"></div>
-    <div class="scanner-corner bottom-left"></div>
-    <div class="scanner-corner bottom-right"></div>
-  </div>
-  <div class="scanner-info">
-    <p><i class="fas fa-barcode"></i> 請將條碼對準掃描框</p>
-    <button id="closeScannerBtn" class="btn btn-danger btn-lg">
-      <i class="fas fa-times"></i> 關閉掃描器
-    </button>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxcvpkLGosFD3-hUMHqtpjIVR9BGn2H_xihTJzT3G7MUo0OJJwGGJ2L2LgOvsM/exec";
-const COLS = { id:0, name:1, qty:2, wh:3, spot:4, loc:5, sn:6, note:7, th:8, date:9 };
-let rawData = [];
-let historyData = [];
-let currentScanTarget = null;
-let lowStockData = [];
-let searchResults = [];
-let currentPage = 1;
-let currentHistoryPage = 1;
-let currentSearchPage = 1;
-const itemsPerPage = 5;
-const historyItemsPerPage = 10;
-const searchItemsPerPage = 10;
-
-// 智能建議系統
-class SmartSuggestion {
-  constructor() {
-    this.currentInput = null;
-    this.currentSuggestions = [];
-    this.selectedIndex = -1;
-    this.isVisible = false;
-  }
-
-  // 初始化智能建議
-  init() {
-    this.setupInputListeners('in_name');
-    this.setupInputListeners('out_name');
-    
-    // 點擊其他地方時隱藏建議
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.input-container')) {
-        this.hideSuggestions();
-      }
-    });
-  }
-
-  // 設置輸入框監聽器
-  setupInputListeners(inputId) {
-    const input = document.getElementById(inputId);
-    const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
-    
-    if (!input || !suggestionsDiv) return;
-
-    input.addEventListener('input', (e) => {
-      this.handleInput(inputId, e.target.value);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      this.handleKeydown(e, inputId);
-    });
-
-    input.addEventListener('focus', (e) => {
-      if (e.target.value.trim()) {
-        this.handleInput(inputId, e.target.value);
-      }
-    });
-  }
-
-  // 處理輸入事件
-  handleInput(inputId, value) {
-    if (!value || value.length < 1) {
-      this.hideSuggestions();
-      return;
-    }
-
-    const suggestions = this.findSimilarItems(value);
-    this.showSuggestions(inputId, suggestions);
-  }
-
-  // 尋找相似物品
-  findSimilarItems(keyword) {
-    if (!rawData || rawData.length <= 1) return [];
-
-    const normalizedKeyword = keyword.toLowerCase().trim();
-    const suggestions = [];
-
-    // 跳過標題行，搜尋相似物品
-    rawData.slice(1).forEach(row => {
-      if (!row || row.length <= Math.max(COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc)) return;
-
-      const name = (row[COLS.name] || '').toString();
-      const sn = (row[COLS.sn] || '').toString();
-      const normalizedName = name.toLowerCase();
-      const normalizedSn = sn.toLowerCase();
-
-      // 計算相似度分數
-      let score = 0;
-      
-      // 完全匹配獲得最高分數
-      if (normalizedName === normalizedKeyword) {
-        score = 100;
-      }
-      // 開頭匹配
-      else if (normalizedName.startsWith(normalizedKeyword)) {
-        score = 90;
-      }
-      // 包含關鍵字
-      else if (normalizedName.includes(normalizedKeyword)) {
-        score = 70;
-      }
-      // 序號匹配
-      else if (normalizedSn.includes(normalizedKeyword)) {
-        score = 60;
-      }
-      // 模糊匹配（容錯匹配）
-      else if (this.fuzzyMatch(normalizedName, normalizedKeyword)) {
-        score = 50;
-      }
-
-      if (score > 0) {
-        suggestions.push({
-          score,
-          name: name,
-          qty: parseInt(row[COLS.qty]) || 0,
-          warehouse: row[COLS.wh] || '',
-          locationSpot: row[COLS.spot] || '',
-          location: row[COLS.loc] || '',
-          serialNumber: sn,
-          note: row[COLS.note] || '',
-          threshold: parseInt(row[COLS.th]) || 5,
-          data: row
-        });
-      }
-    });
-
-    // 按分數排序並限制數量
-    return suggestions
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
-  }
-
-  // 模糊匹配算法（簡化版Levenshtein距離）
-  fuzzyMatch(str1, str2) {
-    if (str2.length < 2) return false;
-    
-    let matches = 0;
-    const minLength = Math.min(str1.length, str2.length);
-    
-    for (let i = 0; i < minLength; i++) {
-      if (str1[i] === str2[i]) {
-        matches++;
-      }
-    }
-    
-    // 如果匹配度超過60%，認為是模糊匹配
-    return (matches / str2.length) > 0.6;
-  }
-
-  // 顯示建議
-  showSuggestions(inputId, suggestions) {
-    const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
-    const inputContainer = suggestionsDiv.parentElement;
-    
-    if (!suggestionsDiv) return;
-
-    this.currentInput = inputId;
-    this.currentSuggestions = suggestions;
-    this.selectedIndex = -1;
-    this.isVisible = true;
-
-    if (suggestions.length === 0) {
-      this.hideSuggestions();
-      return;
-    }
-
-    // 更新容器樣式
-    inputContainer.classList.add('has-suggestions');
-
-    // 建立建議項目HTML
-    suggestionsDiv.innerHTML = suggestions.map((item, index) => `
-      <div class="suggestion-item" data-index="${index}">
-        <div class="suggestion-name">${this.highlightMatch(item.name, document.getElementById(inputId).value)}</div>
-        <div class="suggestion-info">
-          <span class="suggestion-stock">${item.qty} 件</span>
-          ${item.warehouse} · ${item.locationSpot} · ${item.location}
-        </div>
-        ${item.serialNumber ? `<div class="suggestion-location">序號: ${item.serialNumber}</div>` : ''}
-      </div>
-    `).join('');
-
-    // 綁定點擊事件
-    suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
-      item.addEventListener('click', () => {
-        this.selectSuggestion(index);
-      });
-    });
-
-    suggestionsDiv.style.display = 'block';
-  }
-
-  // 高亮匹配文字
-  highlightMatch(text, keyword) {
-    if (!keyword) return text;
-    
-    const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<strong>$1</strong>');
-  }
-
-  // 隱藏建議
-  hideSuggestions() {
-    if (!this.currentInput) return;
-
-    const suggestionsDiv = document.getElementById(`${this.currentInput}_suggestions`);
-    const inputContainer = suggestionsDiv?.parentElement;
-    
-    if (suggestionsDiv) {
-      suggestionsDiv.style.display = 'none';
-      suggestionsDiv.innerHTML = '';
-    }
-    
-    if (inputContainer) {
-      inputContainer.classList.remove('has-suggestions');
-    }
-
-    this.currentInput = null;
-    this.currentSuggestions = [];
-    this.selectedIndex = -1;
-    this.isVisible = false;
-  }
-
-  // 處理鍵盤事件
-  handleKeydown(e, inputId) {
-    if (!this.isVisible || this.currentInput !== inputId) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.moveSelection(1);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.moveSelection(-1);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (this.selectedIndex >= 0) {
-          this.selectSuggestion(this.selectedIndex);
-        }
-        break;
-      case 'Escape':
-        this.hideSuggestions();
-        break;
-    }
-  }
-
-  // 移動選擇
-  moveSelection(direction) {
-    const maxIndex = this.currentSuggestions.length - 1;
-    
-    this.selectedIndex += direction;
-    
-    if (this.selectedIndex > maxIndex) {
-      this.selectedIndex = 0;
-    } else if (this.selectedIndex < 0) {
-      this.selectedIndex = maxIndex;
-    }
-
-    // 更新視覺狀態
-    const suggestionsDiv = document.getElementById(`${this.currentInput}_suggestions`);
-    if (suggestionsDiv) {
-      const items = suggestionsDiv.querySelectorAll('.suggestion-item');
-      items.forEach((item, index) => {
-        item.classList.toggle('active', index === this.selectedIndex);
-      });
-    }
-  }
-
-  // 選擇建議項目
-  selectSuggestion(index) {
-    if (index < 0 || index >= this.currentSuggestions.length) return;
-
-    const suggestion = this.currentSuggestions[index];
-    const inputType = this.currentInput.split('_')[0]; // 'in' or 'out'
-
-    // 填入物料名稱
-    document.getElementById(this.currentInput).value = suggestion.name;
-
-    // 自動填入其他相關資訊
-    if (inputType === 'in') {
-      // 入庫時填入位置資訊和警戒值
-      if (suggestion.warehouse) document.getElementById('in_wh').value = suggestion.warehouse;
-      if (suggestion.locationSpot) document.getElementById('in_spot').value = suggestion.locationSpot;
-      if (suggestion.location) document.getElementById('in_loc').value = suggestion.location;
-      if (suggestion.threshold) document.getElementById('in_threshold').value = suggestion.threshold;
-      
-      // 焦點移到數量欄位
-      document.getElementById('in_qty').focus();
-    } else if (inputType === 'out') {
-      // 出庫時填入位置資訊
-      if (suggestion.warehouse) document.getElementById('out_wh').value = suggestion.warehouse;
-      if (suggestion.locationSpot) document.getElementById('out_spot').value = suggestion.locationSpot;
-      if (suggestion.location) document.getElementById('out_loc').value = suggestion.location;
-      if (suggestion.serialNumber) document.getElementById('out_sn').value = suggestion.serialNumber;
-      
-      // 焦點移到數量欄位，並顯示當前庫存提示
-      const qtyInput = document.getElementById('out_qty');
-      qtyInput.focus();
-      qtyInput.setAttribute('placeholder', `數量 (目前庫存: ${suggestion.qty} 件)`);
-      
-      // 檢查庫存是否足夠
-      setTimeout(() => {
-        const inputQty = parseInt(qtyInput.value) || 0;
-        if (inputQty > suggestion.qty) {
-          qtyInput.style.borderColor = '#dc3545';
-          qtyInput.style.backgroundColor = '#f8d7da';
-          qtyInput.title = `庫存不足！目前僅有 ${suggestion.qty} 件`;
-        } else {
-          qtyInput.style.borderColor = '';
-          qtyInput.style.backgroundColor = '';
-          qtyInput.title = '';
-        }
-      }, 100);
-    }
-
-    this.hideSuggestions();
-  }
-}
-
-// 初始化智能建議系統
-const smartSuggestion = new SmartSuggestion();
-
-// 讀取資料
-async function loadData(){
-  try {
-    const res = await fetch(API_URL);
-    rawData = await res.json();
-    console.log('載入的原始資料:', rawData); // 除錯用
-    renderFilters();
-    updateLowStockData();
-    renderLowStock();
-    renderSearchResults();
-    
-    // 重新初始化智能建議系統（確保有最新數據）
-    smartSuggestion.init();
-  } catch(e){ 
-    console.error("讀取失敗:", e);
-    alert("讀取資料失敗，請檢查網路連線或API設定"); 
-  }
-}
-
-// 載入歷史紀錄
-async function loadHistoryData(){
-  try {
-    const res = await fetch(API_URL + "?action=getHistory");
-    historyData = await res.json();
-    renderHistoryFilters();
-    renderHistory();
-  } catch(e){ 
-    console.error("讀取歷史紀錄失敗:", e);
-    // 如果無法載入歷史紀錄，初始化為空陣列
-    historyData = [];
-    renderHistoryFilters();
-    renderHistory();
-  }
-}
-
-// 出庫數量驗證
-function setupOutQuantityValidation() {
-  const outQtyInput = document.getElementById('out_qty');
-  const outNameInput = document.getElementById('out_name');
-  
-  outQtyInput.addEventListener('input', () => {
-    validateOutQuantity();
-  });
-  
-  outNameInput.addEventListener('input', () => {
-    // 清除之前的庫存提示
-    outQtyInput.setAttribute('placeholder', '數量');
-    outQtyInput.style.borderColor = '';
-    outQtyInput.style.backgroundColor = '';
-    outQtyInput.title = '';
-  });
-}
-
-function validateOutQuantity() {
-  const outQtyInput = document.getElementById('out_qty');
-  const outNameInput = document.getElementById('out_name');
-  const materialName = outNameInput.value.trim();
-  const requestedQty = parseInt(outQtyInput.value) || 0;
-  
-  if (!materialName || !requestedQty) return;
-  
-  // 尋找對應的庫存物品
-  const stockItem = findStockItem(materialName);
-  
-  if (stockItem) {
-    const availableQty = parseInt(stockItem[COLS.qty]) || 0;
-    
-    if (requestedQty > availableQty) {
-      outQtyInput.style.borderColor = '#dc3545';
-      outQtyInput.style.backgroundColor = '#f8d7da';
-      outQtyInput.title = `庫存不足！目前僅有 ${availableQty} 件`;
-      
-      // 在出庫按鈕旁顯示警告
-      showStockWarning(`庫存不足：目前僅有 ${availableQty} 件`);
-    } else {
-      outQtyInput.style.borderColor = '#28a745';
-      outQtyInput.style.backgroundColor = '#d4edda';
-      outQtyInput.title = `庫存充足 (${availableQty} 件)`;
-      hideStockWarning();
-    }
-  }
-}
-
-function findStockItem(materialName) {
-  if (!rawData || rawData.length <= 1) return null;
-  
-  return rawData.slice(1).find(row => {
-    if (!row || row.length <= COLS.name) return false;
-    return (row[COLS.name] || '').toString().toLowerCase() === materialName.toLowerCase();
-  });
-}
-
-function showStockWarning(message) {
-  let warningDiv = document.getElementById('stockWarning');
-  if (!warningDiv) {
-    warningDiv = document.createElement('div');
-    warningDiv.id = 'stockWarning';
-    warningDiv.className = 'alert alert-warning alert-sm mt-2';
-    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span></span>`;
-    document.getElementById('outBtn').parentElement.insertBefore(warningDiv, document.getElementById('outBtn'));
-  }
-  warningDiv.querySelector('span').textContent = message;
-  warningDiv.style.display = 'block';
-}
-
-function hideStockWarning() {
-  const warningDiv = document.getElementById('stockWarning');
-  if (warningDiv) {
-    warningDiv.style.display = 'none';
-  }
-}
-
-// 渲染篩選器選項
-function renderFilters(){
-  const whSet = new Set(), locSet = new Set(), spotSet = new Set();
-  
-  // 確保 rawData 有資料且跳過標題行
-  if(rawData && rawData.length > 1) {
-    rawData.slice(1).forEach(r=>{
-      if(r && r.length > Math.max(COLS.wh, COLS.spot, COLS.loc)) {
-        if(r[COLS.wh] && r[COLS.wh].trim()) whSet.add(r[COLS.wh].trim());
-        if(r[COLS.spot] && r[COLS.spot].trim()) spotSet.add(r[COLS.spot].trim());
-        if(r[COLS.loc] && r[COLS.loc].trim()) locSet.add(r[COLS.loc].trim());
-      }
-    });
-  }
-  
-  const whSel = document.getElementById('warehouseFilter');
-  const spotSel = document.getElementById('locationSpotFilter');
-  const locSel = document.getElementById('locationFilter');
-  
-  whSel.innerHTML = '<option value="">全部倉庫</option>';
-  spotSel.innerHTML = '<option value="">全部地點</option>';
-  locSel.innerHTML = '<option value="">全部位置</option>';
-  
-  Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
-  Array.from(spotSet).sort().forEach(s=> spotSel.innerHTML += `<option value="${s}">${s}</option>`);
-  Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
-  
-  console.log('篩選器選項:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)}); // 除錯用
-}
-
-// 渲染歷史紀錄篩選器
-function renderHistoryFilters(){
-  const whSet = new Set();
-  const spotSet = new Set();
-  
-  historyData.forEach(record => {
-    if(record && record.warehouse && record.warehouse.trim()) whSet.add(record.warehouse.trim());
-    if(record && record.locationSpot && record.locationSpot.trim()) spotSet.add(record.locationSpot.trim());
-  });
-  
-  const historyWhSel = document.getElementById('historyWarehouse');
-  const historySpotSel = document.getElementById('historyLocationSpot');
-  
-  historyWhSel.innerHTML = '<option value="">全部倉庫</option>';
-  historySpotSel.innerHTML = '<option value="">全部地點</option>';
-  
-  Array.from(whSet).sort().forEach(w => 
-    historyWhSel.innerHTML += `<option value="${w}">${w}</option>`
-  );
-  Array.from(spotSet).sort().forEach(s => 
-    historySpotSel.innerHTML += `<option value="${s}">${s}</option>`
-  );
-}
-
-// 更新低庫存資料
-function updateLowStockData(){
-  lowStockData = [];
-  if(rawData && rawData.length > 1) {
-    lowStockData = rawData.slice(1).filter(r=>{
-      if(!r || r.length <= Math.max(COLS.qty, COLS.th)) return false;
-      const qty = parseInt(r[COLS.qty]) || 0;
-      const threshold = parseInt(r[COLS.th]) || 5;
-      return qty <= threshold;
-    });
-  }
-  currentPage = 1;
-  console.log('低庫存資料:', lowStockData); // 除錯用
-}
-
-// 渲染低庫存告警（分頁）
-function renderLowStock(){
-  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const pageData = lowStockData.slice(startIndex, endIndex);
-  
-  const tbody = document.getElementById('lowStockTable');
-  
-  if(pageData.length > 0) {
-    tbody.innerHTML = pageData.map(r=>`
-      <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
-        <td>${r[COLS.name] || '-'}</td>
-        <td>${r[COLS.qty] || 0}</td>
-        <td>${r[COLS.th] || 5}</td>
-        <td>${r[COLS.wh] || '-'}</td>
-        <td>${r[COLS.spot] || '-'}</td>
-        <td>${r[COLS.loc] || '-'}</td>
-      </tr>
-    `).join('');
-  } else {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">無低庫存物料</td></tr>';
-  }
-  
-  // 更新分頁資訊
-  document.getElementById('pageInfo').textContent = 
-    totalPages > 0 ? `第 ${currentPage} 頁，共 ${totalPages} 頁 (總計 ${lowStockData.length} 筆)` : '無資料';
-  document.getElementById('prevPageBtn').disabled = currentPage <= 1;
-  document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
-}
-
-// 渲染搜尋結果（篩選資料）
-function renderSearchResults(){
-  const kw = document.getElementById('search').value.trim().toLowerCase();
-  const whF = document.getElementById('warehouseFilter').value.trim();
-  const spotF = document.getElementById('locationSpotFilter').value.trim();
-  const locF = document.getElementById('locationFilter').value.trim();
-  
-  console.log('搜尋條件:', {keyword: kw, warehouse: whF, spot: spotF, location: locF}); // 除錯用
-  
-  // 如果沒有任何搜尋條件，隱藏搜尋結果
-  if(!kw && !whF && !spotF && !locF){
-    document.getElementById('searchResultsContainer').style.display = 'none';
-    searchResults = [];
-    currentSearchPage = 1;
-    return;
-  }
-  
-  // 篩選搜尋結果
-  searchResults = [];
-  if(rawData && rawData.length > 1) {
-    searchResults = rawData.slice(1).filter(r=>{
-      if(!r || r.length <= Math.max(COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc, COLS.note)) return false;
-      
-      const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.spot,COLS.loc,COLS.note].some(c=> 
-        (r[c] || '').toString().toLowerCase().includes(kw));
-      const matchWh = !whF || (r[COLS.wh] || '').trim() === whF;
-      const matchSpot = !spotF || (r[COLS.spot] || '').trim() === spotF;
-      const matchLoc = !locF || (r[COLS.loc] || '').trim() === locF;
-      
-      return matchKw && matchWh && matchSpot && matchLoc;
-    });
-  }
-  
-  console.log('篩選結果:', searchResults); // 除錯用
-  
-  // 重置到第一頁
-  currentSearchPage = 1;
-  renderSearchResultsPage();
-}
-
-// 渲染搜尋結果分頁
-function renderSearchResultsPage(){
-  const container = document.getElementById('searchResultsContainer');
-  const tbody = document.getElementById('searchResultsTable');
-  
-  if(searchResults.length === 0){
-    container.style.display = 'block';
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
-    
-    // 更新分頁資訊
-    document.getElementById('searchPageInfo').textContent = '無資料';
-    document.getElementById('searchPrevPageBtn').disabled = true;
-    document.getElementById('searchNextPageBtn').disabled = true;
-    return;
-  }
-  
-  // 分頁處理
-  const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
-  const startIndex = (currentSearchPage - 1) * searchItemsPerPage;
-  const endIndex = startIndex + searchItemsPerPage;
-  const pageData = searchResults.slice(startIndex, endIndex);
-  
-  container.style.display = 'block';
-  tbody.innerHTML = pageData.map(r=>`
-    <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5)?'low-stock':''}">
-      <td>${r[COLS.name] || '-'}</td>
-      <td>${r[COLS.qty] || 0}</td>
-      <td>${r[COLS.wh] || '-'}</td>
-      <td>${r[COLS.spot] || '-'}</td>
-      <td>${r[COLS.loc] || '-'}</td>
-      <td><small>${r[COLS.sn] || '-'}</small></td>
-      <td><small>${r[COLS.note] || '-'}</small></td>
-    </tr>
-  `).join('');
-  
-  // 更新分頁資訊
-  document.getElementById('searchPageInfo').textContent = 
-    `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)`;
-  document.getElementById('searchPrevPageBtn').disabled = currentSearchPage <= 1;
-  document.getElementById('searchNextPageBtn').disabled = currentSearchPage >= totalPages;
-}
-
-// 渲染歷史紀錄
-function renderHistory(){
-  const search = document.getElementById('historySearch').value.trim().toLowerCase();
-  const action = document.getElementById('historyAction').value;
-  const dateStart = document.getElementById('historyDateStart').value;
-  const dateEnd = document.getElementById('historyDateEnd').value;
-  const warehouse = document.getElementById('historyWarehouse').value;
-  const locationSpot = document.getElementById('historyLocationSpot').value;
-  
-  console.log('歷史資料:', historyData); // 除錯用
-  
-  // 篩選歷史紀錄
-  let filteredData = historyData.filter(record => {
-    if (!record || typeof record !== 'object') return false;
-    
-    const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
-    const matchAction = !action || record.action === action;
-    const matchWarehouse = !warehouse || record.warehouse === warehouse;
-    const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
-    
-    let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
-      
-      const recordDate = new Date(record.timestamp);
-      if(isNaN(recordDate.getTime())) return false;
-      
-      const recordDateStr = recordDate.toDateString();
-      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
-      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
-      
-      if(startDate && endDate){
-        matchDate = recordDateStr >= startDate && recordDateStr <= endDate;
-      } else if(startDate){
-        matchDate = recordDateStr >= startDate;
-      } else if(endDate){
-        matchDate = recordDateStr <= endDate;
-      }
-    }
-    
-    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
-  });
-  
-  // 分頁處理
-  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
-  const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
-  const endIndex = startIndex + historyItemsPerPage;
-  const pageData = filteredData.slice(startIndex, endIndex);
-  
-  const historyList = document.getElementById('historyList');
-  
-  if(pageData.length > 0){
-    historyList.innerHTML = pageData.map(record => {
-      // 安全檢查
-      if (!record || !record.timestamp) {
-        return '';
-      }
-      
-      const date = new Date(record.timestamp);
-      const dateStr = isNaN(date.getTime()) ? '日期錯誤' : date.toLocaleDateString('zh-TW');
-      const timeStr = isNaN(date.getTime()) ? '時間錯誤' : date.toLocaleTimeString('zh-TW');
-      
-      const action = record.action || '未知動作';
-      const material = record.material || '未知物料';
-      const quantity = record.quantity || 0;
-      const warehouse = record.warehouse || '-';
-      const locationSpot = record.locationSpot || '-';
-      const location = record.location || '-';
-      const serialNumber = record.serialNumber || '';
-      const note = record.note || '';
-      
-      return `
-        <div class="history-record ${action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="flex-grow-1">
-              <div class="d-flex align-items-center mb-1">
-                <i class="fas ${action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
-                <strong>${action}</strong>
-                <span class="badge ${action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
-                  ${quantity} 件
-                </span>
-              </div>
-              <div class="text-muted small">
-                <div><strong>${material}</strong></div>
-                <div>
-                  <i class="fas fa-warehouse me-1"></i>${warehouse} 
-                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${locationSpot}
-                  <i class="fas fa-cube ms-2 me-1"></i>${location}
+<body>
+    <div class="container">
+        <div class="main-container p-4">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-warehouse text-primary"></i> 
+                倉庫物料管理系統
+            </h2>
+            
+            <!-- 導航標籤 -->
+            <ul class="nav nav-pills justify-content-center mb-4" id="mainTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="inventory-tab" data-bs-toggle="pill" data-bs-target="#inventory" type="button">
+                        <i class="fas fa-boxes"></i> 庫存管理
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="search-tab" data-bs-toggle="pill" data-bs-target="#search" type="button">
+                        <i class="fas fa-search"></i> 查詢統計
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history" type="button">
+                        <i class="fas fa-history"></i> 歷史記錄
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="mainTabsContent">
+                <!-- 庫存管理頁面 -->
+                <div class="tab-pane fade show active" id="inventory" role="tabpanel">
+                    <div class="row">
+                        <!-- 入庫 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-plus-circle"></i> 入庫作業</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-container mb-3">
+                                        <input id="in_name" class="form-control" placeholder="物料名稱" autocomplete="off">
+                                        <div id="in_suggestions" class="suggestion-dropdown"></div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <input id="in_qty" type="number" min="1" class="form-control" placeholder="數量">
+                                        </div>
+                                        <div class="col-6">
+                                            <input id="in_threshold" type="number" min="0" class="form-control" placeholder="警戒值" value="5">
+                                        </div>
+                                    </div>
+                                    <input id="in_warehouse" class="form-control mb-3" placeholder="倉庫">
+                                    <input id="in_locationSpot" class="form-control mb-3" placeholder="地點">
+                                    <input id="in_location" class="form-control mb-3" placeholder="位置">
+                                    <input id="in_sn" class="form-control mb-3" placeholder="序號">
+                                    <textarea id="in_note" class="form-control mb-3" placeholder="備註" rows="2"></textarea>
+                                    <button id="inBtn" class="btn btn-success w-100">
+                                        <i class="fas fa-plus"></i> 確認入庫
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 出庫 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-danger text-white">
+                                    <h5><i class="fas fa-minus-circle"></i> 出庫作業</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-container mb-3">
+                                        <input id="out_name" class="form-control" placeholder="物料名稱" autocomplete="off">
+                                        <div id="out_suggestions" class="suggestion-dropdown"></div>
+                                    </div>
+                                    <input id="out_qty" type="number" min="1" class="form-control mb-3" placeholder="數量">
+                                    <input id="out_warehouse" class="form-control mb-3" placeholder="倉庫">
+                                    <input id="out_locationSpot" class="form-control mb-3" placeholder="地點">
+                                    <input id="out_location" class="form-control mb-3" placeholder="位置">
+                                    <input id="out_sn" class="form-control mb-3" placeholder="序號">
+                                    <div id="stockWarning" class="alert alert-warning d-none">
+                                        <i class="fas fa-exclamation-triangle"></i> 庫存不足警告
+                                    </div>
+                                    <button id="outBtn" class="btn btn-danger w-100">
+                                        <i class="fas fa-minus"></i> 確認出庫
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 低庫存警告 -->
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5><i class="fas fa-exclamation-triangle"></i> 低庫存警告</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lowStockTable">
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">載入中...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                ${serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${serialNumber}</div>` : ''}
-                ${note ? `<div><i class="fas fa-sticky-note me-1"></i>${note}</div>` : ''}
-              </div>
+                
+                <!-- 查詢統計頁面 -->
+                <div class="tab-pane fade" id="search" role="tabpanel">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5><i class="fas fa-search"></i> 庫存查詢</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <input id="searchKeyword" class="form-control" placeholder="搜尋物料名稱/序號">
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="searchWarehouse" class="form-select">
+                                        <option value="">全部倉庫</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="searchLocation" class="form-select">
+                                        <option value="">全部地點</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="searchBtn" class="btn btn-primary w-100">
+                                        <i class="fas fa-search"></i> 查詢
+                                    </button>
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="exportBtn" class="btn btn-success w-100">
+                                        <i class="fas fa-download"></i> 匯出
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="searchResultTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">請輸入搜尋條件</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 統計資訊 -->
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="totalItems" class="text-primary">0</h3>
+                                    <p class="mb-0">總物料數</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="lowStockCount" class="text-warning">0</h3>
+                                    <p class="mb-0">低庫存</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="outOfStockCount" class="text-danger">0</h3>
+                                    <p class="mb-0">無庫存</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="totalQuantity" class="text-success">0</h3>
+                                    <p class="mb-0">總數量</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 歷史記錄頁面 -->
+                <div class="tab-pane fade" id="history" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5><i class="fas fa-history"></i> 出入庫歷史記錄</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <input id="historySearch" class="form-control" placeholder="搜尋物料名稱">
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="historyAction" class="form-select">
+                                        <option value="">全部動作</option>
+                                        <option value="入庫">入庫</option>
+                                        <option value="出庫">出庫</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input id="historyDateStart" type="date" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <input id="historyDateEnd" type="date" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="historySearchBtn" class="btn btn-info w-100">
+                                        <i class="fas fa-search"></i> 搜尋
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="historyList" class="fade-in" style="max-height: 500px; overflow-y: auto;">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-history fa-2x mb-3"></i>
+                                    <p>載入歷史記錄中...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="text-end text-muted small">
-              <div>${dateStr}</div>
-              <div>${timeStr}</div>
-            </div>
-          </div>
         </div>
-      `;
-    }).filter(html => html).join('');
-  } else {
-    historyList.innerHTML = `
-      <div class="text-center text-muted py-4">
-        <i class="fas fa-search fa-2x mb-3"></i>
-        <p>無此紀錄</p>
-      </div>
-    `;
-  }
-  
-  // 更新分頁資訊
-  document.getElementById('historyPageInfo').textContent = 
-    totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
-  document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
-  document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
-}
-
-// CSV 匯出功能
-function exportToCSV(data, filename, headers) {
-  const csvContent = [
-    headers.join(','),
-    ...data.map(row => 
-      row.map(cell => 
-        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
-          ? `"${cell.replace(/"/g, '""')}"` : cell
-      ).join(',')
-    )
-  ].join('\n');
-  
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-// 匯出搜尋結果
-function exportSearchResults() {
-  if(searchResults.length === 0) {
-    alert('沒有資料可匯出');
-    return;
-  }
-  
-  const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新日期'];
-  const exportData = searchResults.map(r => [
-    r[COLS.name] || '',
-    r[COLS.qty] || 0,
-    r[COLS.wh] || '',
-    r[COLS.spot] || '',
-    r[COLS.loc] || '',
-    r[COLS.sn] || '',
-    r[COLS.note] || '',
-    r[COLS.th] || 5,
-    r[COLS.date] || ''
-  ]);
-  
-  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
-  exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
-}
-
-// 匯出低庫存清單
-function exportLowStock() {
-  if(lowStockData.length === 0) {
-    alert('沒有低庫存資料可匯出');
-    return;
-  }
-  
-  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '地點', '位置', '序號', '備註', '狀態'];
-  const exportData = lowStockData.map(r => [
-    r[COLS.name] || '',
-    r[COLS.qty] || 0,
-    r[COLS.th] || 5,
-    r[COLS.wh] || '',
-    r[COLS.spot] || '',
-    r[COLS.loc] || '',
-    r[COLS.sn] || '',
-    r[COLS.note] || '',
-    parseInt(r[COLS.qty]) === 0 ? '無庫存' : '低庫存'
-  ]);
-  
-  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
-  exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
-}
-
-// 匯出歷史紀錄
-function exportHistory() {
-  const search = document.getElementById('historySearch').value.trim().toLowerCase();
-  const action = document.getElementById('historyAction').value;
-  const dateStart = document.getElementById('historyDateStart').value;
-  const dateEnd = document.getElementById('historyDateEnd').value;
-  const warehouse = document.getElementById('historyWarehouse').value;
-  const locationSpot = document.getElementById('historyLocationSpot').value;
-  
-  // 篩選歷史紀錄
-  let filteredData = historyData.filter(record => {
-    const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
-    const matchAction = !action || record.action === action;
-    const matchWarehouse = !warehouse || record.warehouse === warehouse;
-    const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
+    </div>
     
-    let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
-      const recordDate = new Date(record.timestamp).toDateString();
-      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
-      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
-      
-      if(startDate && endDate){
-        matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
-        matchDate = recordDate >= startDate;
-      } else if(endDate){
-        matchDate = recordDate <= endDate;
-      }
-    }
-    
-    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
-  });
-  
-  if(filteredData.length === 0) {
-    alert('沒有符合條件的歷史紀錄可匯出');
-    return;
-  }
-  
-  const headers = ['日期時間', '動作', '物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註'];
-  const exportData = filteredData.map(record => [
-    new Date(record.timestamp).toLocaleString('zh-TW'),
-    record.action,
-    record.material,
-    record.quantity,
-    record.warehouse || '',
-    record.locationSpot || '',
-    record.location || '',
-    record.serialNumber || '',
-    record.note || ''
-  ]);
-  
-  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
-  exportToCSV(exportData, `出入庫歷史紀錄_${timestamp}.csv`, headers);
-}
+    <!-- 載入中動畫 -->
+    <div id="loading" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 9999; display: none !important;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">載入中...</span>
+        </div>
+    </div>
 
-// 條碼掃描功能
-function startScanner(targetId){
-  currentScanTarget = targetId;
-  const scanner = document.getElementById('barcodeScanner');
-  scanner.style.display = 'flex';
-  
-  // 初始化攝影機
-  navigator.mediaDevices.getUserMedia({ 
-    video: { 
-      facingMode: "environment",
-      width: { ideal: 640 },
-      height: { ideal: 480 }
-    } 
-  }).then(stream => {
-    const video = document.getElementById('video');
-    video.srcObject = stream;
-    video.play();
-    
-    // 初始化 Quagga
-    Quagga.init({
-      inputStream: {
-        type: "LiveStream",
-        target: video,
-        constraints: {
-          width: 640,
-          height: 480,
-          facingMode: "environment"
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 設定 API URL
+        const API_URL = "https://script.google.com/macros/s/AKfycbyB4TTvjshkq3nb5eWlfHMLiyeDQga9ItJGq_HFM_BXEDdxzmcPWN2CHburipqZv4QS/exec";
+        
+        // 全域變數
+        let inventoryData = [];
+        let historyData = [];
+        
+        // 智能建議系統
+        class SmartSuggestion {
+            constructor(inputId) {
+                this.inputId = inputId;
+                this.suggestionsId = inputId.replace('_name', '_suggestions');
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+                this.init();
+            }
+            
+            init() {
+                const input = document.getElementById(this.inputId);
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                
+                if (!input || !suggestionsDiv) return;
+                
+                input.addEventListener('input', (e) => this.handleInput(e.target.value));
+                input.addEventListener('keydown', (e) => this.handleKeydown(e));
+                
+                // 點擊其他地方時隱藏建議
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.input-container')) {
+                        this.hideSuggestions();
+                    }
+                });
+            }
+            
+            handleInput(value) {
+                if (value.length < 1) {
+                    this.hideSuggestions();
+                    return;
+                }
+                
+                const suggestions = this.findSimilarItems(value);
+                this.showSuggestions(suggestions);
+            }
+            
+            findSimilarItems(keyword) {
+                if (!inventoryData || inventoryData.length <= 1) return [];
+                
+                const normalizedKeyword = keyword.toLowerCase();
+                const suggestions = [];
+                
+                // 跳過標題行，搜尋相似物品
+                inventoryData.slice(1).forEach(row => {
+                    if (!row || row.length < 6) return;
+                    
+                    const [name, qty, warehouse, locationSpot, location, sn, note, threshold] = row;
+                    const normalizedName = (name || '').toString().toLowerCase();
+                    const normalizedSn = (sn || '').toString().toLowerCase();
+                    
+                    let score = 0;
+                    if (normalizedName === normalizedKeyword) score = 100;
+                    else if (normalizedName.startsWith(normalizedKeyword)) score = 90;
+                    else if (normalizedName.includes(normalizedKeyword)) score = 70;
+                    else if (normalizedSn.includes(normalizedKeyword)) score = 60;
+                    
+                    if (score > 0) {
+                        suggestions.push({
+                            score,
+                            name: name || '',
+                            qty: parseInt(qty) || 0,
+                            warehouse: warehouse || '',
+                            locationSpot: locationSpot || '',
+                            location: location || '',
+                            serialNumber: sn || '',
+                            note: note || '',
+                            threshold: parseInt(threshold) || 5,
+                            data: row
+                        });
+                    }
+                });
+                
+                return suggestions.sort((a, b) => b.score - a.score).slice(0, 5);
+            }
+            
+            showSuggestions(suggestions) {
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                this.currentSuggestions = suggestions;
+                this.selectedIndex = -1;
+                
+                if (suggestions.length === 0) {
+                    this.hideSuggestions();
+                    return;
+                }
+                
+                suggestionsDiv.innerHTML = suggestions.map((item, index) => `
+                    <div class="suggestion-item" data-index="${index}">
+                        <div class="fw-bold">${item.name}</div>
+                        <div class="text-muted small">
+                            庫存: ${item.qty} 件 | ${item.warehouse} - ${item.locationSpot} - ${item.location}
+                        </div>
+                        ${item.serialNumber ? `<div class="text-success small">序號: ${item.serialNumber}</div>` : ''}
+                    </div>
+                `).join('');
+                
+                // 綁定點擊事件
+                suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
+                    item.addEventListener('click', () => this.selectSuggestion(index));
+                });
+                
+                suggestionsDiv.style.display = 'block';
+            }
+            
+            hideSuggestions() {
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                if (suggestionsDiv) {
+                    suggestionsDiv.style.display = 'none';
+                    suggestionsDiv.innerHTML = '';
+                }
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+            }
+            
+            handleKeydown(e) {
+                if (this.currentSuggestions.length === 0) return;
+                
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.moveSelection(1);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.moveSelection(-1);
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (this.selectedIndex >= 0) {
+                            this.selectSuggestion(this.selectedIndex);
+                        }
+                        break;
+                    case 'Escape':
+                        this.hideSuggestions();
+                        break;
+                }
+            }
+            
+            moveSelection(direction) {
+                const maxIndex = this.currentSuggestions.length - 1;
+                this.selectedIndex += direction;
+                
+                if (this.selectedIndex > maxIndex) this.selectedIndex = 0;
+                else if (this.selectedIndex < 0) this.selectedIndex = maxIndex;
+                
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                const items = suggestionsDiv.querySelectorAll('.suggestion-item');
+                items.forEach((item, index) => {
+                    item.classList.toggle('active', index === this.selectedIndex);
+                });
+            }
+            
+            selectSuggestion(index) {
+                if (index < 0 || index >= this.currentSuggestions.length) return;
+                
+                const suggestion = this.currentSuggestions[index];
+                const inputType = this.inputId.split('_')[0]; // 'in' or 'out'
+                
+                // 填入物料名稱
+                document.getElementById(this.inputId).value = suggestion.name;
+                
+                // 自動填入其他相關資訊
+                if (inputType === 'in') {
+                    document.getElementById('in_warehouse').value = suggestion.warehouse;
+                    document.getElementById('in_locationSpot').value = suggestion.locationSpot;
+                    document.getElementById('in_location').value = suggestion.location;
+                    document.getElementById('in_threshold').value = suggestion.threshold;
+                    document.getElementById('in_qty').focus();
+                } else {
+                    document.getElementById('out_warehouse').value = suggestion.warehouse;
+                    document.getElementById('out_locationSpot').value = suggestion.locationSpot;
+                    document.getElementById('out_location').value = suggestion.location;
+                    document.getElementById('out_sn').value = suggestion.serialNumber;
+                    
+                    const qtyInput = document.getElementById('out_qty');
+                    qtyInput.focus();
+                    qtyInput.setAttribute('placeholder', `數量 (目前庫存: ${suggestion.qty} 件)`);
+                }
+                
+                this.hideSuggestions();
+            }
         }
-      },
-      locator: {
-        patchSize: "medium",
-        halfSample: true
-      },
-      numOfWorkers: 2,
-      decoder: {
-        readers: [
-          "code_128_reader",
-          "ean_reader", 
-          "ean_8_reader",
-          "code_39_reader"
-        ]
-      },
-      locate: true
-    }, err => {
-      if (err) {
-        console.error("Quagga初始化失敗:", err);
-        alert("無法啟動條碼掃描器：" + err.message);
-        stopScanner();
-        return;
-      }
-      Quagga.start();
-    });
-    
-    // 掃描結果處理
-    Quagga.onDetected(result => {
-      const code = result.codeResult.code;
-      document.getElementById(currentScanTarget).value = code;
-      
-      // 如果掃描的是物料名稱相關欄位，觸發智能建議
-      if (currentScanTarget === 'in_sn' || currentScanTarget === 'out_sn') {
-        // 根據序號自動填入對應的物料資訊
-        const matchedItem = findItemBySerialNumber(code);
-        if (matchedItem) {
-          const inputType = currentScanTarget.split('_')[0]; // 'in' or 'out'
-          const nameInput = document.getElementById(`${inputType}_name`);
-          nameInput.value = matchedItem.name;
-          
-          // 觸發智能建議
-          smartSuggestion.handleInput(`${inputType}_name`, matchedItem.name);
+        
+        // 初始化智能建議
+        const inSuggestion = new SmartSuggestion('in_name');
+        const outSuggestion = new SmartSuggestion('out_name');
+        
+        // 顯示載入中
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
         }
-      }
-      
-      // 提供視覺回饋
-      navigator.vibrate && navigator.vibrate(200);
-      
-      setTimeout(() => {
-        stopScanner();
-        // 聚焦到下一個輸入框
-        const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
-        if(nextInput && nextInput.querySelector('input')){
-          nextInput.querySelector('input').focus();
+        
+        // 隱藏載入中
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
         }
-      }, 1000);
-    });
-    
-  }).catch(err => {
-    console.error("無法存取攝影機:", err);
-    alert("無法開啟攝影機，請確認權限設定");
-    stopScanner();
-  });
-}
-
-function stopScanner(){
-  Quagga.stop();
-  const video = document.getElementById('video');
-  if(video.srcObject){
-    video.srcObject.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-  }
-  document.getElementById('barcodeScanner').style.display = 'none';
-  currentScanTarget = null;
-}
-
-// 根據序號尋找物品
-function findItemBySerialNumber(serialNumber) {
-  if (!rawData || rawData.length <= 1) return null;
-  
-  const foundRow = rawData.slice(1).find(row => {
-    if (!row || row.length <= COLS.sn) return false;
-    return (row[COLS.sn] || '').toString().toLowerCase() === serialNumber.toLowerCase();
-  });
-  
-  if (foundRow) {
-    return {
-      name: foundRow[COLS.name] || '',
-      qty: parseInt(foundRow[COLS.qty]) || 0,
-      warehouse: foundRow[COLS.wh] || '',
-      locationSpot: foundRow[COLS.spot] || '',
-      location: foundRow[COLS.loc] || '',
-      serialNumber: foundRow[COLS.sn] || '',
-      note: foundRow[COLS.note] || '',
-      threshold: parseInt(foundRow[COLS.th]) || 5
-    };
-  }
-  
-  return null;
-}
-
-// 記錄出入庫歷史
-function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, sn, note) {
-  const record = {
-    timestamp: new Date().toISOString(),
-    action: action || '',
-    material: name || '',
-    quantity: parseInt(qty) || 0,
-    warehouse: warehouse || '',
-    locationSpot: locationSpot || '',
-    location: location || '',
-    serialNumber: sn || '',
-    note: note || ''
-  };
-  
-  console.log('新增歷史紀錄:', record); // 除錯用
-  
-  historyData.unshift(record);
-  
-  // 限制歷史紀錄數量，避免記憶體過度使用
-  if(historyData.length > 1000) {
-    historyData = historyData.slice(0, 1000);
-  }
-  
-  // 如果目前在歷史紀錄頁面，更新顯示
-  if(document.getElementById('history-tab').classList.contains('active')) {
-    renderHistory();
-  }
-}
-
-// 入庫
-document.getElementById('inBtn').onclick = async () => {
-  const payload = {
-    action: "add",
-    name: document.getElementById('in_name').value.trim(),
-    qty: document.getElementById('in_qty').value.trim(),
-    warehouse: document.getElementById('in_wh').value.trim(),
-    locationSpot: document.getElementById('in_spot').value.trim(),
-    location: document.getElementById('in_loc').value.trim(),
-    sn: document.getElementById('in_sn').value.trim(),
-    note: document.getElementById('in_note').value.trim(),
-    threshold: document.getElementById('in_threshold').value.trim() || "5"
-  };
-  
-  if (!payload.name || !payload.qty) {
-    alert("物料名稱與數量為必填項目");
-    return;
-  }
-  
-  try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-    
-    // 新增歷史紀錄
-    addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, payload.note);
-    
-    // 清空表單
-    ['in_name', 'in_qty', 'in_wh', 'in_spot', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
-      .forEach(id => document.getElementById(id).value = '');
-    
-    // 隱藏智能建議
-    smartSuggestion.hideSuggestions();
-    
-    await loadData();
-    alert("入庫成功！");
-  } catch (e) {
-    alert("入庫失敗：" + e.message);
-  }
-};
-
-// 出庫
-document.getElementById('outBtn').onclick = async () => {
-  const payload = {
-    action: "delete",
-    name: document.getElementById('out_name').value.trim(),
-    qty: document.getElementById('out_qty').value.trim(),
-    warehouse: document.getElementById('out_wh').value.trim(),
-    locationSpot: document.getElementById('out_spot').value.trim(),
-    location: document.getElementById('out_loc').value.trim(),
-    sn: document.getElementById('out_sn').value.trim()
-  };
-  
-  if (!payload.name || !payload.qty) {
-    alert("物料名稱與數量為必填項目");
-    return;
-  }
-  
-  // 檢查庫存是否足夠
-  const stockItem = findStockItem(payload.name);
-  const requestedQty = parseInt(payload.qty);
-  
-  if (stockItem) {
-    const availableQty = parseInt(stockItem[COLS.qty]) || 0;
-    if (requestedQty > availableQty) {
-      const confirmOut = confirm(`警告：庫存不足！\n要出庫的數量：${requestedQty} 件\n目前庫存：${availableQty} 件\n\n確定要繼續出庫嗎？`);
-      if (!confirmOut) {
-        return;
-      }
-    }
-  }
-  
-  try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-    
-    // 新增歷史紀錄
-    addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, '');
-    
-    // 清空表單
-    ['out_name', 'out_qty', 'out_wh', 'out_spot', 'out_loc', 'out_sn']
-      .forEach(id => {
-        const input = document.getElementById(id);
-        input.value = '';
-        // 重置樣式
-        if (id === 'out_qty') {
-          input.style.borderColor = '';
-          input.style.backgroundColor = '';
-          input.title = '';
-          input.setAttribute('placeholder', '數量');
+        
+        // 載入庫存資料
+        async function loadInventoryData() {
+            try {
+                showLoading();
+                const response = await fetch(API_URL);
+                inventoryData = await response.json();
+                
+                updateStatistics();
+                renderLowStockTable();
+                updateFilters();
+                hideLoading();
+            } catch (error) {
+                console.error('載入庫存資料失敗:', error);
+                alert('載入資料失敗，請檢查網路連線');
+                hideLoading();
+            }
         }
-      });
-    
-    // 隱藏智能建議和警告
-    smartSuggestion.hideSuggestions();
-    hideStockWarning();
-    
-    await loadData();
-    alert("出庫成功！");
-  } catch (e) {
-    alert("出庫失敗：" + e.message);
-  }
-};
-
-// 事件綁定
-document.getElementById('search').oninput = renderSearchResults;
-document.getElementById('warehouseFilter').onchange = renderSearchResults;
-document.getElementById('locationSpotFilter').onchange = renderSearchResults;
-document.getElementById('locationFilter').onchange = renderSearchResults;
-document.getElementById('refreshBtn').onclick = () => {
-  document.getElementById('search').value = '';
-  document.getElementById('warehouseFilter').value = '';
-  document.getElementById('locationSpotFilter').value = '';
-  document.getElementById('locationFilter').value = '';
-  searchResults = [];
-  currentSearchPage = 1;
-  loadData();
-};
-
-// 匯出按鈕事件綁定
-document.getElementById('exportSearchBtn').onclick = exportSearchResults;
-document.getElementById('exportLowStockBtn').onclick = exportLowStock;
-document.getElementById('exportHistoryBtn').onclick = exportHistory;
-
-// 歷史紀錄篩選事件
-document.getElementById('historySearch').oninput = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyAction').onchange = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyDateStart').onchange = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyDateEnd').onchange = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyWarehouse').onchange = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyLocationSpot').onchange = () => {
-  currentHistoryPage = 1;
-  renderHistory();
-};
-document.getElementById('historyRefreshBtn').onclick = () => {
-  // 搜尋按鈕：只執行搜尋，不清除篩選條件
-  currentHistoryPage = 1;
-  renderHistory();
-};
-
-// 清除所有篩選條件按鈕
-document.getElementById('historyClearBtn').onclick = () => {
-  document.getElementById('historySearch').value = '';
-  document.getElementById('historyAction').value = '';
-  document.getElementById('historyDateStart').value = '';
-  document.getElementById('historyDateEnd').value = '';
-  document.getElementById('historyWarehouse').value = '';
-  document.getElementById('historyLocationSpot').value = '';
-  currentHistoryPage = 1;
-  renderHistory();
-  
-  // 同時清除搜尋結果
-  document.getElementById('search').value = '';
-  document.getElementById('warehouseFilter').value = '';
-  document.getElementById('locationSpotFilter').value = '';
-  document.getElementById('locationFilter').value = '';
-  renderSearchResults();
-};
-
-document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
-document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
-document.getElementById('closeScannerBtn').onclick = stopScanner;
-
-// 低庫存分頁控制
-document.getElementById('prevPageBtn').onclick = () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderLowStock();
-  }
-};
-
-document.getElementById('nextPageBtn').onclick = () => {
-  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
-  if (currentPage < totalPages) {
-    currentPage++;
-    renderLowStock();
-  }
-};
-
-// 查詢結果分頁控制
-document.getElementById('searchPrevPageBtn').onclick = () => {
-  if (currentSearchPage > 1) {
-    currentSearchPage--;
-    renderSearchResultsPage();
-  }
-};
-
-document.getElementById('searchNextPageBtn').onclick = () => {
-  const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
-  if (currentSearchPage < totalPages) {
-    currentSearchPage++;
-    renderSearchResultsPage();
-  }
-};
-
-// 歷史紀錄分頁控制
-document.getElementById('historyPrevBtn').onclick = () => {
-  if (currentHistoryPage > 1) {
-    currentHistoryPage--;
-    renderHistory();
-  }
-};
-
-document.getElementById('historyNextBtn').onclick = () => {
-  const search = document.getElementById('historySearch').value.trim().toLowerCase();
-  const action = document.getElementById('historyAction').value;
-  const dateStart = document.getElementById('historyDateStart').value;
-  const dateEnd = document.getElementById('historyDateEnd').value;
-  const warehouse = document.getElementById('historyWarehouse').value;
-  const locationSpot = document.getElementById('historyLocationSpot').value;
-  
-  // 計算篩選後的資料數量
-  let filteredData = historyData.filter(record => {
-    const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
-    const matchAction = !action || record.action === action;
-    const matchWarehouse = !warehouse || record.warehouse === warehouse;
-    const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
-    
-    let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
-      const recordDate = new Date(record.timestamp).toDateString();
-      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
-      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
-      
-      if(startDate && endDate){
-        matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
-        matchDate = recordDate >= startDate;
-      } else if(endDate){
-        matchDate = recordDate <= endDate;
-      }
-    }
-    
-    return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
-  });
-  
-  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
-  if (currentHistoryPage < totalPages) {
-    currentHistoryPage++;
-    renderHistory();
-  }
-};
-
-// 標籤頁切換事件
-document.getElementById('history-tab').onclick = () => {
-  // 當切換到歷史紀錄頁面時，載入歷史資料
-  setTimeout(() => {
-    if(!historyData.length) {
-      loadHistoryData();
-    }
-  }, 100);
-};
-
-// 初始化
-loadData();
-setupOutQuantityValidation();
-
-// 防止頁面刷新時攝影機未正確關閉
-window.addEventListener('beforeunload', stopScanner);
-
-// 當頁面載入完成後，初始化智能建議系統
-document.addEventListener('DOMContentLoaded', () => {
-  smartSuggestion.init();
-});
-</script>
+        
+        // 載入歷史記錄
+        async function loadHistoryData() {
+            try {
+                const response = await fetch(API_URL + "?action=getHistory");
+                historyData = await response.json();
+                renderHistoryList();
+            } catch (error) {
+                console.error('載入歷史記錄失敗:', error);
+                historyData = [];
+                renderHistoryList();
+            }
+        }
+        
+        // 更新統計資料
+        function updateStatistics() {
+            if (!inventoryData || inventoryData.length <= 1) return;
+            
+            let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
+            
+            inventoryData.slice(1).forEach(row => {
+                if (!row || row.length < 3) return;
+                
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                
+                totalItems++;
+                totalQuantity += qty;
+                
+                if (qty === 0) outOfStockCount++;
+                else if (qty <= threshold) lowStockCount++;
+            });
+            
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('lowStockCount').textContent = lowStockCount;
+            document.getElementById('outOfStockCount').textContent = outOfStockCount;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
+        }
+        
+        // 渲染低庫存表格
+        function renderLowStockTable() {
+            const tbody = document.getElementById('lowStockTable');
+            if (!inventoryData || inventoryData.length <= 1) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">無資料</td></tr>';
+                return;
+            }
+            
+            const lowStockItems = inventoryData.slice(1).filter(row => {
+                if (!row || row.length < 8) return false;
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                return qty <= threshold;
+            });
+            
+            if (lowStockItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">目前無低庫存物料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = lowStockItems.map(row => {
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                const className = qty === 0 ? 'out-of-stock' : 'low-stock';
+                
+                return `
+                    <tr class="${className}">
+                        <td>${row[0] || '-'}</td>
+                        <td><strong>${qty}</strong></td>
+                        <td>${threshold}</td>
+                        <td>${row[2] || '-'}</td>
+                        <td>${row[3] || '-'}</td>
+                        <td>${row[4] || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 更新篩選器選項
+        function updateFilters() {
+            if (!inventoryData || inventoryData.length <= 1) return;
+            
+            const warehouses = new Set();
+            const locations = new Set();
+            
+            inventoryData.slice(1).forEach(row => {
+                if (row && row.length > 4) {
+                    if (row[2] && row[2].trim()) warehouses.add(row[2].trim());
+                    if (row[3] && row[3].trim()) locations.add(row[3].trim());
+                }
+            });
+            
+            // 更新倉庫篩選器
+            const warehouseSelect = document.getElementById('searchWarehouse');
+            warehouseSelect.innerHTML = '<option value="">全部倉庫</option>';
+            Array.from(warehouses).sort().forEach(w => {
+                warehouseSelect.innerHTML += `<option value="${w}">${w}</option>`;
+            });
+            
+            // 更新地點篩選器
+            const locationSelect = document.getElementById('searchLocation');
+            locationSelect.innerHTML = '<option value="">全部地點</option>';
+            Array.from(locations).sort().forEach(l => {
+                locationSelect.innerHTML += `<option value="${l}">${l}</option>`;
+            });
+        }
+        
+        // 執行搜尋
+        function performSearch() {
+            const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+            const warehouse = document.getElementById('searchWarehouse').value;
+            const location = document.getElementById('searchLocation').value;
+            
+            if (!inventoryData || inventoryData.length <= 1) {
+                renderSearchResults([]);
+                return;
+            }
+            
+            const results = inventoryData.slice(1).filter(row => {
+                if (!row || row.length < 7) return false;
+                
+                const matchKeyword = !keyword || 
+                    (row[0] || '').toString().toLowerCase().includes(keyword) ||
+                    (row[5] || '').toString().toLowerCase().includes(keyword);
+                const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
+                const matchLocation = !location || (row[3] || '').trim() === location;
+                
+                return matchKeyword && matchWarehouse && matchLocation;
+            });
+            
+            renderSearchResults(results);
+        }
+        
+        // 渲染搜尋結果
+        function renderSearchResults(results) {
+            const tbody = document.getElementById('searchResultTable');
+            
+            if (results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = results.map(row => {
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                const className = qty <= threshold ? (qty === 0 ? 'out-of-stock' : 'low-stock') : '';
+                
+                return `
+                    <tr class="${className}">
+                        <td>${row[0] || '-'}</td>
+                        <td><strong>${qty}</strong></td>
+                        <td>${row[2] || '-'}</td>
+                        <td>${row[3] || '-'}</td>
+                        <td>${row[4] || '-'}</td>
+                        <td><small>${row[5] || '-'}</small></td>
+                        <td><small>${row[6] || '-'}</small></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 渲染歷史記錄
+        function renderHistoryList() {
+            const historyContainer = document.getElementById('historyList');
+            
+            if (!historyData || historyData.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-3"></i>
+                        <p>暫無歷史記錄</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 應用篩選條件
+            const search = document.getElementById('historySearch').value.trim().toLowerCase();
+            const action = document.getElementById('historyAction').value;
+            const dateStart = document.getElementById('historyDateStart').value;
+            const dateEnd = document.getElementById('historyDateEnd').value;
+            
+            let filteredData = historyData.filter(record => {
+                if (!record) return false;
+                
+                const matchSearch = !search || 
+                    (record.material && record.material.toLowerCase().includes(search));
+                const matchAction = !action || record.action === action;
+                
+                let matchDate = true;
+                if (dateStart || dateEnd) {
+                    if (!record.timestamp) return false;
+                    const recordDate = new Date(record.timestamp);
+                    if (isNaN(recordDate.getTime())) return false;
+                    
+                    if (dateStart && dateEnd) {
+                        const start = new Date(dateStart);
+                        const end = new Date(dateEnd + 'T23:59:59');
+                        matchDate = recordDate >= start && recordDate <= end;
+                    } else if (dateStart) {
+                        const start = new Date(dateStart);
+                        matchDate = recordDate >= start;
+                    } else if (dateEnd) {
+                        const end = new Date(dateEnd + 'T23:59:59');
+                        matchDate = recordDate <= end;
+                    }
+                }
+                
+                return matchSearch && matchAction && matchDate;
+            });
+            
+            // 按時間排序（最新的在前）
+            filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // 限制顯示數量
+            filteredData = filteredData.slice(0, 50);
+            
+            historyContainer.innerHTML = filteredData.map(record => {
+                const date = new Date(record.timestamp);
+                const dateStr = isNaN(date.getTime()) ? '日期錯誤' : 
+                    date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW');
+                
+                return `
+                    <div class="card mb-2 history-item ${record.action === '入庫' ? 'in' : 'out'}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                                        <strong>${record.action || '未知動作'}</strong>
+                                        <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                                            ${record.quantity || 0} 件
+                                        </span>
+                                    </div>
+                                    <div class="text-muted">
+                                        <div class="fw-bold mb-1">${record.material || '未知物料'}</div>
+                                        <div class="small">
+                                            <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'}
+                                            <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.locationSpot || '-'}
+                                            <i class="fas fa-cube ms-2 me-1"></i>${record.location || '-'}
+                                        </div>
+                                        ${record.serialNumber ? `<div class="small"><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
+                                        ${record.note ? `<div class="small"><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="text-end text-muted small">
+                                    <div>${dateStr}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 匯出CSV
+        function exportToCSV(data, filename, headers) {
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => 
+                    row.map(cell => 
+                        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
+                            ? `"${cell.replace(/"/g, '""')}"` : cell
+                    ).join(',')
+                )
+            ].join('\n');
+            
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 出庫數量驗證
+        function validateOutQuantity() {
+            const nameInput = document.getElementById('out_name');
+            const qtyInput = document.getElementById('out_qty');
+            const warningDiv = document.getElementById('stockWarning');
+            
+            const materialName = nameInput.value.trim();
+            const requestedQty = parseInt(qtyInput.value) || 0;
+            
+            if (!materialName || !requestedQty) {
+                warningDiv.classList.add('d-none');
+                return;
+            }
+            
+            // 尋找對應的庫存物品
+            const stockItem = inventoryData.slice(1).find(row => 
+                row && row[0] && row[0].toString().toLowerCase() === materialName.toLowerCase()
+            );
+            
+            if (stockItem) {
+                const availableQty = parseInt(stockItem[1]) || 0;
+                
+                if (requestedQty > availableQty) {
+                    warningDiv.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        庫存不足：目前僅有 ${availableQty} 件
+                    `;
+                    warningDiv.classList.remove('d-none');
+                } else {
+                    warningDiv.classList.add('d-none');
+                }
+            } else {
+                warningDiv.classList.add('d-none');
+            }
+        }
+        
+        // 入庫功能
+        async function addStock() {
+            const name = document.getElementById('in_name').value.trim();
+            const qty = document.getElementById('in_qty').value.trim();
+            const warehouse = document.getElementById('in_warehouse').value.trim();
+            const locationSpot = document.getElementById('in_locationSpot').value.trim();
+            const location = document.getElementById('in_location').value.trim();
+            const sn = document.getElementById('in_sn').value.trim();
+            const note = document.getElementById('in_note').value.trim();
+            const threshold = document.getElementById('in_threshold').value.trim() || '5';
+            
+            if (!name || !qty) {
+                alert('物料名稱與數量為必填項目');
+                return;
+            }
+            
+            if (parseInt(qty) <= 0) {
+                alert('數量必須大於0');
+                return;
+            }
+            
+            const payload = {
+                action: "add",
+                name, qty, warehouse, locationSpot, location, sn, note, threshold
+            };
+            
+            try {
+                showLoading();
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 清空表單
+                    ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note', 'in_threshold']
+                        .forEach(id => document.getElementById(id).value = '');
+                    
+                    // 重新載入資料
+                    await loadInventoryData();
+                    alert('入庫成功！');
+                } else {
+                    alert('入庫失敗：' + (result.message || '未知錯誤'));
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('入庫失敗:', error);
+                alert('入庫失敗，請稍後再試');
+                hideLoading();
+            }
+        }
+        
+        // 出庫功能
+        async function removeStock() {
+            const name = document.getElementById('out_name').value.trim();
+            const qty = document.getElementById('out_qty').value.trim();
+            const warehouse = document.getElementById('out_warehouse').value.trim();
+            const locationSpot = document.getElementById('out_locationSpot').value.trim();
+            const location = document.getElementById('out_location').value.trim();
+            const sn = document.getElementById('out_sn').value.trim();
+            
+            if (!name || !qty) {
+                alert('物料名稱與數量為必填項目');
+                return;
+            }
+            
+            if (parseInt(qty) <= 0) {
+                alert('數量必須大於0');
+                return;
+            }
+            
+            // 檢查庫存是否足夠
+            const stockItem = inventoryData.slice(1).find(row => 
+                row && row[0] && row[0].toString().toLowerCase() === name.toLowerCase()
+            );
+            
+            if (stockItem) {
+                const availableQty = parseInt(stockItem[1]) || 0;
+                const requestedQty = parseInt(qty);
+                
+                if (requestedQty > availableQty) {
+                    const confirmOut = confirm(
+                        `警告：庫存不足！\n` +
+                        `要出庫的數量：${requestedQty} 件\n` +
+                        `目前庫存：${availableQty} 件\n\n` +
+                        `確定要繼續出庫嗎？`
+                    );
+                    if (!confirmOut) return;
+                }
+            }
+            
+            const payload = {
+                action: "delete",
+                name, qty, warehouse, locationSpot, location, sn
+            };
+            
+            try {
+                showLoading();
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 清空表單
+                    ['out_name', 'out_qty', 'out_warehouse', 'out_locationSpot', 'out_location', 'out_sn']
+                        .forEach(id => document.getElementById(id).value = '');
+                    
+                    // 隱藏警告
+                    document.getElementById('stockWarning').classList.add('d-none');
+                    
+                    // 重新載入資料
+                    await loadInventoryData();
+                    alert('出庫成功！');
+                } else {
+                    alert('出庫失敗：' + (result.message || '未知錯誤'));
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('出庫失敗:', error);
+                alert('出庫失敗，請稍後再試');
+                hideLoading();
+            }
+        }
+        
+        // 事件綁定
+        document.addEventListener('DOMContentLoaded', function() {
+            // 入庫按鈕
+            document.getElementById('inBtn').addEventListener('click', addStock);
+            
+            // 出庫按鈕
+            document.getElementById('outBtn').addEventListener('click', removeStock);
+            
+            // 搜尋按鈕
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            
+            // 匯出按鈕
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+                const warehouse = document.getElementById('searchWarehouse').value;
+                const location = document.getElementById('searchLocation').value;
+                
+                if (!inventoryData || inventoryData.length <= 1) {
+                    alert('無資料可匯出');
+                    return;
+                }
+                
+                let results = inventoryData.slice(1);
+                
+                if (keyword || warehouse || location) {
+                    results = results.filter(row => {
+                        if (!row || row.length < 7) return false;
+                        
+                        const matchKeyword = !keyword || 
+                            (row[0] || '').toString().toLowerCase().includes(keyword) ||
+                            (row[5] || '').toString().toLowerCase().includes(keyword);
+                        const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
+                        const matchLocation = !location || (row[3] || '').trim() === location;
+                        
+                        return matchKeyword && matchWarehouse && matchLocation;
+                    });
+                }
+                
+                if (results.length === 0) {
+                    alert('無符合條件的資料可匯出');
+                    return;
+                }
+                
+                const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新時間'];
+                const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+                exportToCSV(results, `庫存查詢結果_${timestamp}.csv`, headers);
+            });
+            
+            // 出庫數量輸入時驗證
+            document.getElementById('out_qty').addEventListener('input', validateOutQuantity);
+            document.getElementById('out_name').addEventListener('input', validateOutQuantity);
+            
+            // 搜尋輸入框即時搜尋
+            document.getElementById('searchKeyword').addEventListener('input', performSearch);
+            document.getElementById('searchWarehouse').addEventListener('change', performSearch);
+            document.getElementById('searchLocation').addEventListener('change', performSearch);
+            
+            // 歷史記錄搜尋
+            document.getElementById('historySearchBtn').addEventListener('click', renderHistoryList);
+            document.getElementById('historySearch').addEventListener('input', renderHistoryList);
+            document.getElementById('historyAction').addEventListener('change', renderHistoryList);
+            document.getElementById('historyDateStart').addEventListener('change', renderHistoryList);
+            document.getElementById('historyDateEnd').addEventListener('change', renderHistoryList);
+            
+            // 標籤切換時載入對應資料
+            document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
+                if (historyData.length === 0) {
+                    loadHistoryData();
+                }
+            });
+            
+            // 初始載入
+            loadInventoryData();
+        });
+    </script>
 </body>
 </html>
