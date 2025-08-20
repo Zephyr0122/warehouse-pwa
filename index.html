@@ -644,7 +644,17 @@
         async function loadInventoryData() {
             try {
                 showLoading();
-                const response = await fetch(API_URL);
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 inventoryData = await response.json();
                 
                 updateStatistics();
@@ -653,7 +663,7 @@
                 hideLoading();
             } catch (error) {
                 console.error('載入庫存資料失敗:', error);
-                alert('載入資料失敗，請檢查網路連線');
+                alert('載入資料失敗，請檢查網路連線或API設定');
                 hideLoading();
             }
         }
@@ -661,7 +671,17 @@
         // 載入歷史記錄
         async function loadHistoryData() {
             try {
-                const response = await fetch(API_URL + "?action=getHistory");
+                const response = await fetch(API_URL + "?action=getHistory", {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 historyData = await response.json();
                 renderHistoryList();
             } catch (error) {
@@ -673,7 +693,13 @@
         
         // 更新統計資料
         function updateStatistics() {
-            if (!inventoryData || inventoryData.length <= 1) return;
+            if (!inventoryData || inventoryData.length <= 1) {
+                document.getElementById('totalItems').textContent = '0';
+                document.getElementById('lowStockCount').textContent = '0';
+                document.getElementById('outOfStockCount').textContent = '0';
+                document.getElementById('totalQuantity').textContent = '0';
+                return;
+            }
             
             let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
             
@@ -933,24 +959,38 @@
             document.body.removeChild(link);
         }
         
-        // 出庫數量驗證
+        // 出庫數量驗證 - 修正版本
         function validateOutQuantity() {
             const nameInput = document.getElementById('out_name');
             const qtyInput = document.getElementById('out_qty');
+            const warehouseInput = document.getElementById('out_warehouse');
+            const locationSpotInput = document.getElementById('out_locationSpot');
+            const locationInput = document.getElementById('out_location');
+            const snInput = document.getElementById('out_sn');
             const warningDiv = document.getElementById('stockWarning');
             
             const materialName = nameInput.value.trim();
+            const warehouse = warehouseInput.value.trim();
+            const locationSpot = locationSpotInput.value.trim();
+            const location = locationInput.value.trim();
+            const sn = snInput.value.trim();
             const requestedQty = parseInt(qtyInput.value) || 0;
             
-            if (!materialName || !requestedQty) {
+            if (!materialName || !requestedQty || !inventoryData || inventoryData.length <= 1) {
                 warningDiv.classList.add('d-none');
                 return;
             }
             
-            // 尋找對應的庫存物品
-            const stockItem = inventoryData.slice(1).find(row => 
-                row && row[0] && row[0].toString().toLowerCase() === materialName.toLowerCase()
-            );
+            // 尋找對應的庫存物品 - 需要完全匹配所有欄位
+            const stockItem = inventoryData.slice(1).find(row => {
+                if (!row || row.length < 6) return false;
+                
+                return (row[0] || '').toString().trim() === materialName &&
+                       (row[2] || '').toString().trim() === warehouse &&
+                       (row[3] || '').toString().trim() === locationSpot &&
+                       (row[4] || '').toString().trim() === location &&
+                       (row[5] || '').toString().trim() === sn;
+            });
             
             if (stockItem) {
                 const availableQty = parseInt(stockItem[1]) || 0;
@@ -965,7 +1005,11 @@
                     warningDiv.classList.add('d-none');
                 }
             } else {
-                warningDiv.classList.add('d-none');
+                warningDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    找不到指定的物料項目，請檢查資訊是否正確
+                `;
+                warningDiv.classList.remove('d-none');
             }
         }
         
@@ -1003,12 +1047,17 @@
                     body: JSON.stringify(payload)
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 if (result.status === 'success') {
                     // 清空表單
-                    ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note', 'in_threshold']
+                    ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note']
                         .forEach(id => document.getElementById(id).value = '');
+                    document.getElementById('in_threshold').value = '5';
                     
                     // 重新載入資料
                     await loadInventoryData();
@@ -1020,7 +1069,7 @@
                 hideLoading();
             } catch (error) {
                 console.error('入庫失敗:', error);
-                alert('入庫失敗，請稍後再試');
+                alert('入庫失敗，請檢查網路連線或API設定');
                 hideLoading();
             }
         }
@@ -1045,9 +1094,15 @@
             }
             
             // 檢查庫存是否足夠
-            const stockItem = inventoryData.slice(1).find(row => 
-                row && row[0] && row[0].toString().toLowerCase() === name.toLowerCase()
-            );
+            const stockItem = inventoryData.slice(1).find(row => {
+                if (!row || row.length < 6) return false;
+                
+                return (row[0] || '').toString().trim() === name &&
+                       (row[2] || '').toString().trim() === warehouse &&
+                       (row[3] || '').toString().trim() === locationSpot &&
+                       (row[4] || '').toString().trim() === location &&
+                       (row[5] || '').toString().trim() === sn;
+            });
             
             if (stockItem) {
                 const availableQty = parseInt(stockItem[1]) || 0;
@@ -1077,6 +1132,10 @@
                     body: JSON.stringify(payload)
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 if (result.status === 'success') {
@@ -1097,7 +1156,7 @@
                 hideLoading();
             } catch (error) {
                 console.error('出庫失敗:', error);
-                alert('出庫失敗，請稍後再試');
+                alert('出庫失敗，請檢查網路連線或API設定');
                 hideLoading();
             }
         }
@@ -1150,9 +1209,13 @@
                 exportToCSV(results, `庫存查詢結果_${timestamp}.csv`, headers);
             });
             
-            // 出庫數量輸入時驗證
+            // 出庫數量輸入時驗證 - 修正事件綁定
             document.getElementById('out_qty').addEventListener('input', validateOutQuantity);
-            document.getElementById('out_name').addEventListener('input', validateOutQuantity);
+            document.getElementById('out_name').addEventListener('blur', validateOutQuantity);
+            document.getElementById('out_warehouse').addEventListener('blur', validateOutQuantity);
+            document.getElementById('out_locationSpot').addEventListener('blur', validateOutQuantity);
+            document.getElementById('out_location').addEventListener('blur', validateOutQuantity);
+            document.getElementById('out_sn').addEventListener('blur', validateOutQuantity);
             
             // 搜尋輸入框即時搜尋
             document.getElementById('searchKeyword').addEventListener('input', performSearch);
@@ -1176,7 +1239,3 @@
             // 初始載入
             loadInventoryData();
         });
-    </script>
-</body>
-</html>
-
