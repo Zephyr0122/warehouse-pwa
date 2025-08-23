@@ -8,118 +8,23 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         body { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            min-height: 100vh;
+            background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin: 20px 0;
         }
         
-        .nav-pills .nav-link {
-            border-radius: 15px;
-            margin: 0 5px;
-            transition: all 0.3s ease;
-            background: transparent;
-            border: 2px solid transparent;
-        }
-        
-        .nav-pills .nav-link:hover {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: rgba(102, 126, 234, 0.3);
-        }
-        
-        .nav-pills .nav-link.active {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-color: transparent;
-            color: white !important;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .btn {
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            font-weight: 600;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-            border: none;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #fa709a, #fee140);
-            border: none;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .form-control {
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        
-        .table {
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .table th {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-        }
-        
         .low-stock {
-            background: linear-gradient(135deg, #fff3cd, #ffeaa7) !important;
-            animation: pulse 2s infinite;
+            background-color: #fff3cd !important;
         }
         
         .out-of-stock {
-            background: linear-gradient(135deg, #f8d7da, #fab1a0) !important;
-            animation: shake 0.5s ease-in-out;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            background-color: #f8d7da !important;
         }
         
         .suggestion-dropdown {
@@ -129,57 +34,39 @@
             right: 0;
             background: white;
             border: 1px solid #dee2e6;
-            border-radius: 0 0 10px 10px;
+            border-radius: 0 0 5px 5px;
             max-height: 200px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             display: none;
         }
         
         .suggestion-item {
-            padding: 12px;
+            padding: 10px;
             cursor: pointer;
             border-bottom: 1px solid #f8f9fa;
-            transition: all 0.3s ease;
         }
         
         .suggestion-item:hover, .suggestion-item.active {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            transform: translateX(5px);
+            background-color: #e9ecef;
         }
         
         .input-container {
             position: relative;
         }
         
-        .stats-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
         .history-item {
-            border-left: 4px solid;
+            border-left: 4px solid #6c757d;
             margin-bottom: 10px;
-            transition: all 0.3s ease;
         }
         
-        .history-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        .history-item.in { 
+            border-left-color: #28a745; 
         }
         
-        .history-item.in { border-left-color: #28a745; }
-        .history-item.out { border-left-color: #dc3545; }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .history-item.out { 
+            border-left-color: #dc3545; 
         }
     </style>
 </head>
@@ -216,7 +103,7 @@
                     <div class="row">
                         <!-- 入庫 -->
                         <div class="col-md-6 mb-4">
-                            <div class="card h-100">
+                            <div class="card">
                                 <div class="card-header bg-success text-white">
                                     <h5><i class="fas fa-plus-circle"></i> 入庫作業</h5>
                                 </div>
@@ -247,7 +134,7 @@
                         
                         <!-- 出庫 -->
                         <div class="col-md-6 mb-4">
-                            <div class="card h-100">
+                            <div class="card">
                                 <div class="card-header bg-danger text-white">
                                     <h5><i class="fas fa-minus-circle"></i> 出庫作業</h5>
                                 </div>
@@ -333,12 +220,12 @@
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
+                                            <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th><th>更新時間</th>
                                         </tr>
                                     </thead>
                                     <tbody id="searchResultTable">
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted">請輸入搜尋條件</td>
+                                            <td colspan="8" class="text-center text-muted">請輸入搜尋條件</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -349,7 +236,7 @@
                     <!-- 統計資訊 -->
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <div class="card stats-card text-center">
+                            <div class="card text-center">
                                 <div class="card-body">
                                     <h3 id="totalItems" class="text-primary">0</h3>
                                     <p class="mb-0">總物料數</p>
@@ -357,7 +244,7 @@
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <div class="card stats-card text-center">
+                            <div class="card text-center">
                                 <div class="card-body">
                                     <h3 id="lowStockCount" class="text-warning">0</h3>
                                     <p class="mb-0">低庫存</p>
@@ -365,7 +252,7 @@
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <div class="card stats-card text-center">
+                            <div class="card text-center">
                                 <div class="card-body">
                                     <h3 id="outOfStockCount" class="text-danger">0</h3>
                                     <p class="mb-0">無庫存</p>
@@ -373,7 +260,7 @@
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <div class="card stats-card text-center">
+                            <div class="card text-center">
                                 <div class="card-body">
                                     <h3 id="totalQuantity" class="text-success">0</h3>
                                     <p class="mb-0">總數量</p>
@@ -414,7 +301,7 @@
                                 </div>
                             </div>
                             
-                            <div id="historyList" class="fade-in" style="max-height: 500px; overflow-y: auto;">
+                            <div id="historyList" style="max-height: 500px; overflow-y: auto;">
                                 <div class="text-center text-muted py-4">
                                     <i class="fas fa-history fa-2x mb-3"></i>
                                     <p>載入歷史記錄中...</p>
@@ -462,7 +349,6 @@
                 input.addEventListener('input', (e) => this.handleInput(e.target.value));
                 input.addEventListener('keydown', (e) => this.handleKeydown(e));
                 
-                // 點擊其他地方時隱藏建議
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.input-container')) {
                         this.hideSuggestions();
@@ -486,11 +372,11 @@
                 const normalizedKeyword = keyword.toLowerCase();
                 const suggestions = [];
                 
-                // 跳過標題行，搜尋相似物品
+                // 修正：使用正確的欄位順序 品名(0), 數量(1), 倉庫(2), 地點(3), 位置(4), 序號(5), 備註(6), 低庫存警戒(7), 最後更新(8)
                 inventoryData.slice(1).forEach(row => {
                     if (!row || row.length < 6) return;
                     
-                    const [name, qty, warehouse, locationSpot, location, sn, note, threshold] = row;
+                    const [name, qty, warehouse, locationSpot, location, sn, note, threshold, lastUpdate] = row;
                     const normalizedName = (name || '').toString().toLowerCase();
                     const normalizedSn = (sn || '').toString().toLowerCase();
                     
@@ -511,6 +397,7 @@
                             serialNumber: sn || '',
                             note: note || '',
                             threshold: parseInt(threshold) || 5,
+                            lastUpdate: lastUpdate || '',
                             data: row
                         });
                     }
@@ -539,7 +426,6 @@
                     </div>
                 `).join('');
                 
-                // 綁定點擊事件
                 suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
                     item.addEventListener('click', () => this.selectSuggestion(index));
                 });
@@ -599,12 +485,10 @@
                 if (index < 0 || index >= this.currentSuggestions.length) return;
                 
                 const suggestion = this.currentSuggestions[index];
-                const inputType = this.inputId.split('_')[0]; // 'in' or 'out'
+                const inputType = this.inputId.split('_')[0];
                 
-                // 填入物料名稱
                 document.getElementById(this.inputId).value = suggestion.name;
                 
-                // 自動填入其他相關資訊
                 if (inputType === 'in') {
                     document.getElementById('in_warehouse').value = suggestion.warehouse;
                     document.getElementById('in_locationSpot').value = suggestion.locationSpot;
@@ -626,29 +510,23 @@
             }
         }
         
-        // 初始化智能建議
         const inSuggestion = new SmartSuggestion('in_name');
         const outSuggestion = new SmartSuggestion('out_name');
         
-        // 顯示載入中
         function showLoading() {
             document.getElementById('loading').style.display = 'flex';
         }
         
-        // 隱藏載入中
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
         }
         
-        // 載入庫存資料
         async function loadInventoryData() {
             try {
                 showLoading();
                 const response = await fetch(API_URL, {
                     method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
+                    headers: { 'Cache-Control': 'no-cache' }
                 });
                 
                 if (!response.ok) {
@@ -656,7 +534,6 @@
                 }
                 
                 inventoryData = await response.json();
-                
                 updateStatistics();
                 renderLowStockTable();
                 updateFilters();
@@ -668,14 +545,11 @@
             }
         }
         
-        // 載入歷史記錄
         async function loadHistoryData() {
             try {
                 const response = await fetch(API_URL + "?action=getHistory", {
                     method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
+                    headers: { 'Cache-Control': 'no-cache' }
                 });
                 
                 if (!response.ok) {
@@ -691,7 +565,6 @@
             }
         }
         
-        // 更新統計資料
         function updateStatistics() {
             if (!inventoryData || inventoryData.length <= 1) {
                 document.getElementById('totalItems').textContent = '0';
@@ -703,6 +576,7 @@
             
             let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
             
+            // 修正：使用正確的欄位索引 數量(1), 低庫存警戒(7)
             inventoryData.slice(1).forEach(row => {
                 if (!row || row.length < 3) return;
                 
@@ -722,7 +596,6 @@
             document.getElementById('totalQuantity').textContent = totalQuantity;
         }
         
-        // 渲染低庫存表格
         function renderLowStockTable() {
             const tbody = document.getElementById('lowStockTable');
             if (!inventoryData || inventoryData.length <= 1) {
@@ -760,13 +633,13 @@
             }).join('');
         }
         
-        // 更新篩選器選項
         function updateFilters() {
             if (!inventoryData || inventoryData.length <= 1) return;
             
             const warehouses = new Set();
             const locations = new Set();
             
+            // 修正：使用正確的欄位索引 倉庫(2), 地點(3)
             inventoryData.slice(1).forEach(row => {
                 if (row && row.length > 4) {
                     if (row[2] && row[2].trim()) warehouses.add(row[2].trim());
@@ -774,14 +647,12 @@
                 }
             });
             
-            // 更新倉庫篩選器
             const warehouseSelect = document.getElementById('searchWarehouse');
             warehouseSelect.innerHTML = '<option value="">全部倉庫</option>';
             Array.from(warehouses).sort().forEach(w => {
                 warehouseSelect.innerHTML += `<option value="${w}">${w}</option>`;
             });
             
-            // 更新地點篩選器
             const locationSelect = document.getElementById('searchLocation');
             locationSelect.innerHTML = '<option value="">全部地點</option>';
             Array.from(locations).sort().forEach(l => {
@@ -789,7 +660,6 @@
             });
         }
         
-        // 執行搜尋
         function performSearch() {
             const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
             const warehouse = document.getElementById('searchWarehouse').value;
@@ -803,6 +673,7 @@
             const results = inventoryData.slice(1).filter(row => {
                 if (!row || row.length < 7) return false;
                 
+                // 修正：使用正確的欄位索引 品名(0), 序號(5), 倉庫(2), 地點(3)
                 const matchKeyword = !keyword || 
                     (row[0] || '').toString().toLowerCase().includes(keyword) ||
                     (row[5] || '').toString().toLowerCase().includes(keyword);
@@ -815,12 +686,11 @@
             renderSearchResults(results);
         }
         
-        // 渲染搜尋結果
         function renderSearchResults(results) {
             const tbody = document.getElementById('searchResultTable');
             
             if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">查無符合條件的資料</td></tr>';
                 return;
             }
             
@@ -838,12 +708,12 @@
                         <td>${row[4] || '-'}</td>
                         <td><small>${row[5] || '-'}</small></td>
                         <td><small>${row[6] || '-'}</small></td>
+                        <td><small>${row[8] || '-'}</small></td>
                     </tr>
                 `;
             }).join('');
         }
         
-        // 渲染歷史記錄
         function renderHistoryList() {
             const historyContainer = document.getElementById('historyList');
             
@@ -857,7 +727,6 @@
                 return;
             }
             
-            // 應用篩選條件
             const search = document.getElementById('historySearch').value.trim().toLowerCase();
             const action = document.getElementById('historyAction').value;
             const dateStart = document.getElementById('historyDateStart').value;
@@ -892,10 +761,7 @@
                 return matchSearch && matchAction && matchDate;
             });
             
-            // 按時間排序（最新的在前）
             filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            // 限制顯示數量
             filteredData = filteredData.slice(0, 50);
             
             historyContainer.innerHTML = filteredData.map(record => {
@@ -936,7 +802,6 @@
             }).join('');
         }
         
-        // 匯出CSV
         function exportToCSV(data, filename, headers) {
             const csvContent = [
                 headers.join(','),
@@ -959,7 +824,6 @@
             document.body.removeChild(link);
         }
         
-        // 出庫數量驗證 - 修正版本
         function validateOutQuantity() {
             const nameInput = document.getElementById('out_name');
             const qtyInput = document.getElementById('out_qty');
@@ -981,7 +845,7 @@
                 return;
             }
             
-            // 尋找對應的庫存物品 - 需要完全匹配所有欄位
+            // 修正：使用正確的欄位索引進行匹配 品名(0), 倉庫(2), 地點(3), 位置(4), 序號(5)
             const stockItem = inventoryData.slice(1).find(row => {
                 if (!row || row.length < 6) return false;
                 
@@ -993,7 +857,7 @@
             });
             
             if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0;
+                const availableQty = parseInt(stockItem[1]) || 0; // 數量(1)
                 
                 if (requestedQty > availableQty) {
                     warningDiv.innerHTML = `
@@ -1013,7 +877,6 @@
             }
         }
         
-        // 入庫功能
         async function addStock() {
             const name = document.getElementById('in_name').value.trim();
             const qty = document.getElementById('in_qty').value.trim();
@@ -1054,12 +917,10 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    // 清空表單
                     ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note']
                         .forEach(id => document.getElementById(id).value = '');
                     document.getElementById('in_threshold').value = '5';
                     
-                    // 重新載入資料
                     await loadInventoryData();
                     alert('入庫成功！');
                 } else {
@@ -1074,7 +935,6 @@
             }
         }
         
-        // 出庫功能
         async function removeStock() {
             const name = document.getElementById('out_name').value.trim();
             const qty = document.getElementById('out_qty').value.trim();
@@ -1093,7 +953,7 @@
                 return;
             }
             
-            // 檢查庫存是否足夠
+            // 修正：使用正確的欄位索引檢查庫存
             const stockItem = inventoryData.slice(1).find(row => {
                 if (!row || row.length < 6) return false;
                 
@@ -1105,7 +965,7 @@
             });
             
             if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0;
+                const availableQty = parseInt(stockItem[1]) || 0; // 數量(1)
                 const requestedQty = parseInt(qty);
                 
                 if (requestedQty > availableQty) {
@@ -1139,14 +999,11 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    // 清空表單
                     ['out_name', 'out_qty', 'out_warehouse', 'out_locationSpot', 'out_location', 'out_sn']
                         .forEach(id => document.getElementById(id).value = '');
                     
-                    // 隱藏警告
                     document.getElementById('stockWarning').classList.add('d-none');
                     
-                    // 重新載入資料
                     await loadInventoryData();
                     alert('出庫成功！');
                 } else {
@@ -1161,18 +1018,25 @@
             }
         }
         
+        // 防抖函數，避免即時搜尋過於頻繁
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
         // 事件綁定
         document.addEventListener('DOMContentLoaded', function() {
-            // 入庫按鈕
             document.getElementById('inBtn').addEventListener('click', addStock);
-            
-            // 出庫按鈕
             document.getElementById('outBtn').addEventListener('click', removeStock);
-            
-            // 搜尋按鈕
             document.getElementById('searchBtn').addEventListener('click', performSearch);
             
-            // 匯出按鈕
             document.getElementById('exportBtn').addEventListener('click', function() {
                 const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
                 const warehouse = document.getElementById('searchWarehouse').value;
@@ -1204,12 +1068,12 @@
                     return;
                 }
                 
-                const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新時間'];
+                const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '低庫存警戒', '最後更新'];
                 const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
                 exportToCSV(results, `庫存查詢結果_${timestamp}.csv`, headers);
             });
             
-            // 出庫數量輸入時驗證 - 修正事件綁定
+            // 出庫數量驗證
             document.getElementById('out_qty').addEventListener('input', validateOutQuantity);
             document.getElementById('out_name').addEventListener('blur', validateOutQuantity);
             document.getElementById('out_warehouse').addEventListener('blur', validateOutQuantity);
@@ -1217,26 +1081,28 @@
             document.getElementById('out_location').addEventListener('blur', validateOutQuantity);
             document.getElementById('out_sn').addEventListener('blur', validateOutQuantity);
             
-            // 搜尋輸入框即時搜尋
-            document.getElementById('searchKeyword').addEventListener('input', performSearch);
+            // 使用防抖搜尋，避免過於頻繁
+            const debouncedSearch = debounce(performSearch, 300);
+            document.getElementById('searchKeyword').addEventListener('input', debouncedSearch);
             document.getElementById('searchWarehouse').addEventListener('change', performSearch);
             document.getElementById('searchLocation').addEventListener('change', performSearch);
             
             // 歷史記錄搜尋
+            const debouncedHistoryRender = debounce(renderHistoryList, 300);
             document.getElementById('historySearchBtn').addEventListener('click', renderHistoryList);
-            document.getElementById('historySearch').addEventListener('input', renderHistoryList);
+            document.getElementById('historySearch').addEventListener('input', debouncedHistoryRender);
             document.getElementById('historyAction').addEventListener('change', renderHistoryList);
             document.getElementById('historyDateStart').addEventListener('change', renderHistoryList);
             document.getElementById('historyDateEnd').addEventListener('change', renderHistoryList);
             
-            // 標籤切換時載入對應資料
             document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
                 if (historyData.length === 0) {
                     loadHistoryData();
                 }
             });
             
-            // 初始載入
             loadInventoryData();
         });
-
+    </script>
+</body>
+</html>
