@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>倉庫物料管理（PWA)</title>
+<title>倉庫物料管理（PWA）- 除錯版</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -14,6 +14,27 @@
   .low-stock { background-color: #fff3cd !important; }
   .out-of-stock { background-color: #f8d7da !important; }
   .scroll-table { max-height: 250px; overflow-y: auto; }
+  
+  /* 除錯資訊面板 */
+  .debug-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    max-width: 300px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    font-family: monospace;
+  }
+  
+  .debug-panel.hidden {
+    display: none;
+  }
   
   /* 智能建議下拉選單樣式 */
   .suggestion-dropdown {
@@ -169,11 +190,67 @@
     border-color: #007bff;
     color: white !important;
   }
+  
+  /* 載入動畫 */
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #f5c6cb;
+    margin: 10px 0;
+  }
+  
+  .success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #c3e6cb;
+    margin: 10px 0;
+  }
 </style>
 </head>
 <body class="bg-light">
+
+<!-- 除錯資訊面板 -->
+<div id="debugPanel" class="debug-panel">
+  <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 5px;">
+    <strong>除錯資訊</strong>
+    <button onclick="toggleDebugPanel()" style="background:none; border:none; color:white; font-size:16px; cursor:pointer;">×</button>
+  </div>
+  <div id="debugContent">
+    <div>狀態: <span id="debugStatus">初始化中...</span></div>
+    <div>API URL: <span id="debugApiUrl">-</span></div>
+    <div>資料筆數: <span id="debugDataCount">0</span></div>
+    <div>最後更新: <span id="debugLastUpdate">-</span></div>
+    <div>錯誤訊息: <span id="debugError">無</span></div>
+  </div>
+</div>
+
 <div class="container py-3">
-  <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
+  <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）- 除錯版</h3>
+
+  <!-- 連線狀態指示 -->
+  <div id="statusIndicator" class="alert alert-info text-center">
+    <i class="fas fa-sync fa-spin"></i> 正在載入資料...
+  </div>
 
   <!-- 主要功能標籤頁 -->
   <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
@@ -185,6 +262,11 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
         <i class="fas fa-history"></i> 歷史紀錄
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="debug-tab" data-bs-toggle="tab" data-bs-target="#debug" type="button" role="tab">
+        <i class="fas fa-bug"></i> 除錯工具
       </button>
     </li>
   </ul>
@@ -246,7 +328,7 @@
             </button>
             <span id="searchPageInfo" class="page-info">第 1 頁，共 1 頁</span>
             <button id="searchNextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
-              下一頁  <i class="fas fa-chevron-right"></i>
+              下一頁  <i class="fas fa-chevron-right"></i>
             </button>
           </div>
         </div>
@@ -260,7 +342,7 @@
           <div id="in_name_suggestions" class="suggestion-dropdown"></div>
         </div>
         <div class="input-group mb-2">
-          <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
+          <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
           <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
         </div>
         <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
@@ -315,7 +397,7 @@
           <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
             <i class="fas fa-chevron-left"></i> 上一頁
           </button>
-          <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
+          <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
           <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
             下一頁 <i class="fas fa-chevron-right"></i>
           </button>
@@ -384,11 +466,53 @@
             <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
               <i class="fas fa-chevron-left"></i> 上一頁
             </button>
-            <span id="historyPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+            <span id="historyPageInfo" class="page-info">第 1 頁，共 1 頁</span>
             <button id="historyNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
               下一頁 <i class="fas fa-chevron-right"></i>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 除錯工具頁面 -->
+    <div class="tab-pane fade" id="debug" role="tabpanel">
+      <div class="card p-3">
+        <h5><i class="fas fa-bug text-danger"></i> 除錯工具</h5>
+        
+        <!-- API 測試 -->
+        <div class="mb-4">
+          <h6>API 連線測試</h6>
+          <div class="mb-3">
+            <label class="form-label">API URL:</label>
+            <div class="input-group">
+              <input id="testApiUrl" class="form-control" value="">
+              <button id="testApiBtn" class="btn btn-outline-primary">測試連線</button>
+            </div>
+          </div>
+          <div id="testResults"></div>
+        </div>
+        
+        <!-- 資料檢查 -->
+        <div class="mb-4">
+          <h6>資料狀態檢查</h6>
+          <button id="checkDataBtn" class="btn btn-outline-info mb-2">檢查資料結構</button>
+          <div id="dataCheck"></div>
+        </div>
+        
+        <!-- 原始資料預覽 -->
+        <div class="mb-4">
+          <h6>原始資料預覽（前5筆）</h6>
+          <div id="rawDataPreview" class="bg-light p-2" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow: auto;">
+            暫無資料
+          </div>
+        </div>
+        
+        <!-- 本地儲存清理 -->
+        <div class="mb-4">
+          <h6>系統重置</h6>
+          <button id="clearCacheBtn" class="btn btn-warning">清除快取</button>
+          <button id="resetSystemBtn" class="btn btn-danger">重置系統</button>
         </div>
       </div>
     </div>
@@ -415,6 +539,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
+// 配置和全域變數
 const API_URL = "https://script.google.com/macros/s/AKfycby7V9qRhO54Cdnjy5w5z6CIgWPQheTjaJrnf843BcXVHYEqvYNDJq5hnPHg7gwnWUg/exec";
 const COLS = { id:0, name:1, qty:2, wh:3, spot:4, loc:5, sn:6, note:7, th:8, date:9 };
 let rawData = [];
@@ -429,6 +554,41 @@ const itemsPerPage = 5;
 const historyItemsPerPage = 10;
 const searchItemsPerPage = 10;
 
+// 除錯工具
+function updateDebugInfo(status, error = null) {
+  document.getElementById('debugStatus').textContent = status;
+  document.getElementById('debugApiUrl').textContent = API_URL;
+  document.getElementById('debugDataCount').textContent = rawData ? rawData.length - 1 : 0;
+  document.getElementById('debugLastUpdate').textContent = new Date().toLocaleTimeString('zh-TW');
+  document.getElementById('debugError').textContent = error || '無';
+}
+
+function toggleDebugPanel() {
+  const panel = document.getElementById('debugPanel');
+  panel.classList.toggle('hidden');
+}
+
+function showStatus(message, type = 'info') {
+  const statusDiv = document.getElementById('statusIndicator');
+  statusDiv.className = `alert alert-${type} text-center`;
+  statusDiv.innerHTML = message;
+  
+  if (type === 'success') {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
+  }
+}
+
+function logError(context, error) {
+  console.error(`[${context}]`, error);
+  updateDebugInfo(`錯誤: ${context}`, error.message || error.toString());
+  
+  if (context === '載入資料') {
+    showStatus(`❌ ${context}失敗: ${error.message}`, 'danger');
+  }
+}
+
 // 智能建議系統
 class SmartSuggestion {
   constructor() {
@@ -438,12 +598,10 @@ class SmartSuggestion {
     this.isVisible = false;
   }
 
-  // 初始化智能建議
   init() {
     this.setupInputListeners('in_name');
     this.setupInputListeners('out_name');
     
-    // 點擊其他地方時隱藏建議
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.input-container')) {
         this.hideSuggestions();
@@ -451,7 +609,6 @@ class SmartSuggestion {
     });
   }
 
-  // 設置輸入框監聽器
   setupInputListeners(inputId) {
     const input = document.getElementById(inputId);
     const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
@@ -473,7 +630,6 @@ class SmartSuggestion {
     });
   }
 
-  // 處理輸入事件
   handleInput(inputId, value) {
     if (!value || value.length < 1) {
       this.hideSuggestions();
@@ -484,14 +640,12 @@ class SmartSuggestion {
     this.showSuggestions(inputId, suggestions);
   }
 
-  // 尋找相似物品
   findSimilarItems(keyword) {
     if (!rawData || rawData.length <= 1) return [];
 
     const normalizedKeyword = keyword.toLowerCase().trim();
     const suggestions = [];
 
-    // 跳過標題行，搜尋相似物品
     rawData.slice(1).forEach(row => {
       if (!row || row.length <= Math.max(COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc)) return;
 
@@ -500,27 +654,17 @@ class SmartSuggestion {
       const normalizedName = name.toLowerCase();
       const normalizedSn = sn.toLowerCase();
 
-      // 計算相似度分數
       let score = 0;
       
-      // 完全匹配獲得最高分數
       if (normalizedName === normalizedKeyword) {
         score = 100;
-      }
-      // 開頭匹配
-      else if (normalizedName.startsWith(normalizedKeyword)) {
+      } else if (normalizedName.startsWith(normalizedKeyword)) {
         score = 90;
-      }
-      // 包含關鍵字
-      else if (normalizedName.includes(normalizedKeyword)) {
+      } else if (normalizedName.includes(normalizedKeyword)) {
         score = 70;
-      }
-      // 序號匹配
-      else if (normalizedSn.includes(normalizedKeyword)) {
+      } else if (normalizedSn.includes(normalizedKeyword)) {
         score = 60;
-      }
-      // 模糊匹配（容錯匹配）
-      else if (this.fuzzyMatch(normalizedName, normalizedKeyword)) {
+      } else if (this.fuzzyMatch(normalizedName, normalizedKeyword)) {
         score = 50;
       }
 
@@ -540,13 +684,11 @@ class SmartSuggestion {
       }
     });
 
-    // 按分數排序並限制數量
     return suggestions
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
   }
 
-  // 模糊匹配算法（簡化版Levenshtein距離）
   fuzzyMatch(str1, str2) {
     if (str2.length < 2) return false;
     
@@ -559,11 +701,9 @@ class SmartSuggestion {
       }
     }
     
-    // 如果匹配度超過60%，認為是模糊匹配
     return (matches / str2.length) > 0.6;
   }
 
-  // 顯示建議
   showSuggestions(inputId, suggestions) {
     const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
     const inputContainer = suggestionsDiv.parentElement;
@@ -580,10 +720,8 @@ class SmartSuggestion {
       return;
     }
 
-    // 更新容器樣式
     inputContainer.classList.add('has-suggestions');
 
-    // 建立建議項目HTML
     suggestionsDiv.innerHTML = suggestions.map((item, index) => `
       <div class="suggestion-item" data-index="${index}">
         <div class="suggestion-name">${this.highlightMatch(item.name, document.getElementById(inputId).value)}</div>
@@ -591,11 +729,10 @@ class SmartSuggestion {
           <span class="suggestion-stock">${item.qty}件</span>
            ${item.warehouse} · ${item.locationSpot} · ${item.location}
         </div>
-        ${item.serialNumber ? `<div class="suggestion-location"序號: ${item.serialNumber}</div>` : ''}
+        ${item.serialNumber ? `<div class="suggestion-location">序號: ${item.serialNumber}</div>` : ''}
       </div>
     `).join('');
 
-    // 綁定點擊事件
     suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
       item.addEventListener('click', () => {
         this.selectSuggestion(index);
@@ -605,15 +742,13 @@ class SmartSuggestion {
     suggestionsDiv.style.display = 'block';
   }
 
-  // 高亮匹配文字
   highlightMatch(text, keyword) {
     if (!keyword) return text;
     
-    const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\      const name = (row[COLS.name]')})`, 'gi');
     return text.replace(regex, '<strong>$1</strong>');
   }
 
-  // 隱藏建議
   hideSuggestions() {
     if (!this.currentInput) return;
 
@@ -635,7 +770,6 @@ class SmartSuggestion {
     this.isVisible = false;
   }
 
-  // 處理鍵盤事件
   handleKeydown(e, inputId) {
     if (!this.isVisible || this.currentInput !== inputId) return;
 
@@ -660,7 +794,6 @@ class SmartSuggestion {
     }
   }
 
-  // 移動選擇
   moveSelection(direction) {
     const maxIndex = this.currentSuggestions.length - 1;
     
@@ -672,7 +805,6 @@ class SmartSuggestion {
       this.selectedIndex = maxIndex;
     }
 
-    // 更新視覺狀態
     const suggestionsDiv = document.getElementById(`${this.currentInput}_suggestions`);
     if (suggestionsDiv) {
       const items = suggestionsDiv.querySelectorAll('.suggestion-item');
@@ -682,39 +814,31 @@ class SmartSuggestion {
     }
   }
 
-  // 選擇建議項目
   selectSuggestion(index) {
     if (index < 0 || index >= this.currentSuggestions.length) return;
 
     const suggestion = this.currentSuggestions[index];
-    const inputType = this.currentInput.split('_')[0]; // 'in' or 'out'
+    const inputType = this.currentInput.split('_')[0];
 
-    // 填入物料名稱
     document.getElementById(this.currentInput).value = suggestion.name;
 
-    // 自動填入其他相關資訊
     if (inputType === 'in') {
-      // 入庫時填入位置資訊和警戒值
       if (suggestion.warehouse) document.getElementById('in_wh').value = suggestion.warehouse;
       if (suggestion.locationSpot) document.getElementById('in_spot').value = suggestion.locationSpot;
       if (suggestion.location) document.getElementById('in_loc').value = suggestion.location;
       if (suggestion.threshold) document.getElementById('in_threshold').value = suggestion.threshold;
       
-      // 焦點移到數量欄位
       document.getElementById('in_qty').focus();
     } else if (inputType === 'out') {
-      // 出庫時填入位置資訊
       if (suggestion.warehouse) document.getElementById('out_wh').value = suggestion.warehouse;
       if (suggestion.locationSpot) document.getElementById('out_spot').value = suggestion.locationSpot;
       if (suggestion.location) document.getElementById('out_loc').value = suggestion.location;
       if (suggestion.serialNumber) document.getElementById('out_sn').value = suggestion.serialNumber;
       
-      // 焦點移到數量欄位，並顯示當前庫存提示
       const qtyInput = document.getElementById('out_qty');
       qtyInput.focus();
       qtyInput.setAttribute('placeholder', `數量 (目前庫存: ${suggestion.qty} 件)`);
       
-      // 檢查庫存是否足夠  
       setTimeout(() => {
         const inputQty = parseInt(qtyInput.value) || 0;
         if (inputQty > suggestion.qty) {
@@ -733,44 +857,234 @@ class SmartSuggestion {
   }
 }
 
-// 初始化智能建議系統
 const smartSuggestion = new SmartSuggestion();
 
-// 讀取資料
-async function loadData(){
+// 改進的 API 測試函數
+async function testApiConnection(customUrl = null) {
+  const testUrl = customUrl || API_URL;
+  updateDebugInfo('測試API連線中...');
+  showStatus('<i class="fas fa-sync fa-spin"></i> 測試API連線中...', 'info');
+  
   try {
-    const res = await fetch(API_URL);
-    rawData = await res.json();
-    console.log('載入的原始資料:', rawData);  // 除錯用
+    console.log('測試 API URL:', testUrl);
+    
+    // 設置超時
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+    
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    console.log('API 回應狀態:', response.status);
+    console.log('API 回應標頭:', [...response.headers.entries()]);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    console.log('內容類型:', contentType);
+    
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.log('非JSON回應內容:', text.substring(0, 500));
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error(`API返回非JSON格式資料: ${text.substring(0, 100)}...`);
+      }
+    }
+    
+    console.log('API 回應資料:', data);
+    
+    if (customUrl) {
+      document.getElementById('testResults').innerHTML = `
+        <div class="success-message">
+          <strong>✅ 連線成功！</strong><br>
+          狀態碼: ${response.status}<br>
+          資料筆數: ${Array.isArray(data) ? data.length : '非陣列格式'}<br>
+          內容類型: ${contentType}
+        </div>
+      `;
+    }
+    
+    updateDebugInfo('API連線成功');
+    showStatus('✅ API 連線測試成功！', 'success');
+    
+    return data;
+    
+  } catch (error) {
+    console.error('API連線測試失敗:', error);
+    
+    let errorMessage = '';
+    if (error.name === 'AbortError') {
+      errorMessage = '請求超時（10秒）';
+    } else if (error.message.includes('Failed to fetch')) {
+      errorMessage = '網路連線失敗或CORS問題';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    logError('API連線測試', error);
+    
+    if (customUrl) {
+      document.getElementById('testResults').innerHTML = `
+        <div class="error-message">
+          <strong>❌ 連線失敗！</strong><br>
+          錯誤: ${errorMessage}
+        </div>
+      `;
+    } else {
+      showStatus(`❌ API 連線失敗: ${errorMessage}`, 'danger');
+    }
+    
+    throw error;
+  }
+}
+
+// 改進的載入資料函數
+async function loadData() {
+  updateDebugInfo('正在載入資料...');
+  showStatus('<i class="fas fa-sync fa-spin"></i> 正在載入資料...', 'info');
+  
+  try {
+    console.log('開始載入資料，API URL:', API_URL);
+    
+    const data = await testApiConnection();
+    
+    if (!Array.isArray(data)) {
+      throw new Error(`期望陣列格式，但收到: ${typeof data}`);
+    }
+    
+    if (data.length === 0) {
+      console.warn('API 返回空陣列');
+      showStatus('⚠️ API 返回空資料', 'warning');
+    }
+    
+    rawData = data;
+    console.log('成功載入資料:', rawData.length, '筆');
+    console.log('資料樣本:', rawData.slice(0, 3));
+    
+    // 更新除錯資訊
+    updateRawDataPreview();
+    
+    // 渲染介面
     renderFilters();
     updateLowStockData();
     renderLowStock();
     renderSearchResults();
     
-    // 重新初始化智能建議系統（確保有最新數據）
     smartSuggestion.init();
-  } catch(e){ 
-    console.error("讀取失敗:", e);
-    alert("讀取資料失敗，請檢查網路連線或API設定"); 
+    
+    updateDebugInfo('資料載入完成');
+    showStatus(`✅ 成功載入 ${rawData.length - 1} 筆資料`, 'success');
+    
+  } catch (error) {
+    console.error('載入資料失敗:', error);
+    logError('載入資料', error);
+    
+    // 不使用測試資料，保持空白狀態
+    rawData = [];
+    
+    renderFilters();
+    updateLowStockData();
+    renderLowStock();
+    renderSearchResults();
+    smartSuggestion.init();
+    
+    showStatus('❌ 資料載入失敗，請檢查 API 連線或使用除錯工具', 'danger');
+  }
+}
+
+// 更新原始資料預覽
+function updateRawDataPreview() {
+  const preview = document.getElementById('rawDataPreview');
+  if (rawData && rawData.length > 0) {
+    const sampleData = rawData.slice(0, 6); // 顯示前6筆（含標題）
+    preview.textContent = JSON.stringify(sampleData, null, 2);
+  } else {
+    preview.textContent = '暫無資料';
+  }
+}
+
+// 資料結構檢查
+function checkDataStructure() {
+  const checkDiv = document.getElementById('dataCheck');
+  
+  if (!rawData || rawData.length === 0) {
+    checkDiv.innerHTML = '<div class="error-message">❌ 無資料</div>';
+    return;
+  }
+  
+  const issues = [];
+  const header = rawData[0];
+  
+  // 檢查標題行
+  if (!header || !Array.isArray(header)) {
+    issues.push('標題行格式錯誤');
+  } else {
+    const expectedCols = ['ID', '物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '日期'];
+    expectedCols.forEach((col, index) => {
+      if (!header[index] || !header[index].toString().includes(col.slice(-2))) {
+        issues.push(`第 ${index + 1} 欄可能不是 "${col}"`);
+      }
+    });
+  }
+  
+  // 檢查資料行
+  if (rawData.length > 1) {
+    const dataRows = rawData.slice(1, 6); // 檢查前5筆資料
+    dataRows.forEach((row, index) => {
+      if (!row || !Array.isArray(row)) {
+        issues.push(`第 ${index + 2} 行資料格式錯誤`);
+      } else if (row.length < 10) {
+        issues.push(`第 ${index + 2} 行欄位數不足 (${row.length}/10)`);
+      }
+    });
+  }
+  
+  if (issues.length === 0) {
+    checkDiv.innerHTML = '<div class="success-message">✅ 資料結構正常</div>';
+  } else {
+    checkDiv.innerHTML = `<div class="error-message">❌ 發現問題:<br>${issues.map(issue => `• ${issue}`).join('<br>')}</div>`;
   }
 }
 
 // 載入歷史紀錄
-async function loadHistoryData(){
+async function loadHistoryData() {
   try {
+    updateDebugInfo('正在載入歷史紀錄...');
     const res = await fetch(API_URL + "?action=getHistory");
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
     historyData = await res.json();
+    console.log('載入歷史紀錄:', historyData.length, '筆');
+    
     renderHistoryFilters();
     renderHistory();
-  } catch(e){ 
-    console.error("讀取歷史紀錄失敗:", e);
-    // 如果無法載入歷史紀錄，初始化為空陣列
+    updateDebugInfo('歷史紀錄載入完成');
+    
+  } catch (error) {
+    console.error('載入歷史紀錄失敗:', error);
     historyData = [];
     renderHistoryFilters();
     renderHistory();
+    updateDebugInfo('歷史紀錄載入失敗', error.message);
   }
 }
-
 // 出庫數量驗證
 function setupOutQuantityValidation() {
   const outQtyInput = document.getElementById('out_qty');
@@ -781,8 +1095,7 @@ function setupOutQuantityValidation() {
   });
   
   outNameInput.addEventListener('input', () => {
-    // 清除之前的庫存提示
-    outQtyInput.setAttribute('placeholder', 'æ•¸é‡');
+    outQtyInput.setAttribute('placeholder', '數量');
     outQtyInput.style.borderColor = '';
     outQtyInput.style.backgroundColor = '';
     outQtyInput.title = '';
@@ -797,7 +1110,6 @@ function validateOutQuantity() {
   
   if (!materialName || !requestedQty) return;
   
-  // 尋找對應的庫存物品
   const stockItem = findStockItem(materialName);
   
   if (stockItem) {
@@ -807,8 +1119,6 @@ function validateOutQuantity() {
       outQtyInput.style.borderColor = '#dc3545';
       outQtyInput.style.backgroundColor = '#f8d7da';
       outQtyInput.title = `庫存不足！目前僅有 ${availableQty} 件`;
-      
-     // 在出庫按鈕旁顯示警告
       showStockWarning(`庫存不足：目前僅有 ${availableQty} 件`);
     } else {
       outQtyInput.style.borderColor = '#28a745';
@@ -849,16 +1159,15 @@ function hideStockWarning() {
 }
 
 // 渲染篩選器選項
-function renderFilters(){
+function renderFilters() {
   const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   
-  // 確保 rawData 有資料且跳過標題行
-  if(rawData && rawData.length > 1) {
-    rawData.slice(1).forEach(r=>{
-      if(r && r.length > Math.max(COLS.wh, COLS.spot, COLS.loc)) {
-        if(r[COLS.wh] && r[COLS.wh].trim()) whSet.add(r[COLS.wh].trim());
-        if(r[COLS.spot] && r[COLS.spot].trim()) spotSet.add(r[COLS.spot].trim());
-        if(r[COLS.loc] && r[COLS.loc].trim()) locSet.add(r[COLS.loc].trim());
+  if (rawData && rawData.length > 1) {
+    rawData.slice(1).forEach(r => {
+      if (r && r.length > Math.max(COLS.wh, COLS.spot, COLS.loc)) {
+        if (r[COLS.wh] && r[COLS.wh].toString().trim()) whSet.add(r[COLS.wh].toString().trim());
+        if (r[COLS.spot] && r[COLS.spot].toString().trim()) spotSet.add(r[COLS.spot].toString().trim());
+        if (r[COLS.loc] && r[COLS.loc].toString().trim()) locSet.add(r[COLS.loc].toString().trim());
       }
     });
   }
@@ -871,20 +1180,21 @@ function renderFilters(){
   spotSel.innerHTML = '<option value="">全部地點</option>';
   locSel.innerHTML = '<option value="">全部位置</option>';
   
-  Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
-  Array.from(spotSet).sort().forEach(s=> spotSel.innerHTML += `<option value="${s}">${s}</option>`);
-  Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
+  Array.from(whSet).sort().forEach(w => whSel.innerHTML += `<option value="${w}">${w}</option>`);
+  Array.from(spotSet).sort().forEach(s => spotSel.innerHTML += `<option value="${s}">${s}</option>`);
+  Array.from(locSet).sort().forEach(l => locSel.innerHTML += `<option value="${l}">${l}</option>`);
   
-  console.log('ç¯©é¸å™¨é¸é …:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)}); // 除錯用
+  console.log('篩選器選項:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)});
+}
 
 // 渲染歷史紀錄篩選器
-function renderHistoryFilters(){
+function renderHistoryFilters() {
   const whSet = new Set();
   const spotSet = new Set();
   
   historyData.forEach(record => {
-    if(record && record.warehouse && record.warehouse.trim()) whSet.add(record.warehouse.trim());
-    if(record && record.locationSpot && record.locationSpot.trim()) spotSet.add(record.locationSpot.trim());
+    if (record && record.warehouse && record.warehouse.trim()) whSet.add(record.warehouse.trim());
+    if (record && record.locationSpot && record.locationSpot.trim()) spotSet.add(record.locationSpot.trim());
   });
   
   const historyWhSel = document.getElementById('historyWarehouse');
@@ -902,22 +1212,22 @@ function renderHistoryFilters(){
 }
 
 // 更新低庫存資料
-function updateLowStockData(){
+function updateLowStockData() {
   lowStockData = [];
-  if(rawData && rawData.length > 1) {
-    lowStockData = rawData.slice(1).filter(r=>{
-      if(!r || r.length <= Math.max(COLS.qty, COLS.th)) return false;
+  if (rawData && rawData.length > 1) {
+    lowStockData = rawData.slice(1).filter(r => {
+      if (!r || r.length <= Math.max(COLS.qty, COLS.th)) return false;
       const qty = parseInt(r[COLS.qty]) || 0;
       const threshold = parseInt(r[COLS.th]) || 5;
       return qty <= threshold;
     });
   }
   currentPage = 1;
-  console.log('低庫存資料:', lowStockData); // 除錯用
+  console.log('低庫存資料:', lowStockData.length, '筆');
 }
 
 // 渲染低庫存告警（分頁）
-function renderLowStock(){
+function renderLowStock() {
   const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -925,9 +1235,9 @@ function renderLowStock(){
   
   const tbody = document.getElementById('lowStockTable');
   
-  if(pageData.length > 0) {
-    tbody.innerHTML = pageData.map(r=>`
-      <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
+  if (pageData.length > 0) {
+    tbody.innerHTML = pageData.map(r => `
+      <tr class="${parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock'}">
         <td>${r[COLS.name] || '-'}</td>
         <td>${r[COLS.qty] || 0}</td>
         <td>${r[COLS.th] || 5}</td>
@@ -940,7 +1250,6 @@ function renderLowStock(){
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">無低庫存物料</td></tr>';
   }
   
-  // 更新分頁資訊
   document.getElementById('pageInfo').textContent = 
     totalPages > 0 ? `第 ${currentPage} 頁，共 ${totalPages} 頁 (總計 ${lowStockData.length} 筆)` : '無資料';
   document.getElementById('prevPageBtn').disabled = currentPage <= 1;
@@ -948,70 +1257,65 @@ function renderLowStock(){
 }
 
 // 渲染搜尋結果（篩選資料）
-function renderSearchResults(){
+function renderSearchResults() {
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value.trim();
   const spotF = document.getElementById('locationSpotFilter').value.trim();
   const locF = document.getElementById('locationFilter').value.trim();
   
-  console.log('搜尋條件:', {keyword: kw, warehouse: whF, spot: spotF, location: locF}); // 除錯用
+  console.log('搜尋條件:', {keyword: kw, warehouse: whF, spot: spotF, location: locF});
   
-  // 如果沒有任何搜尋條件，隱藏搜尋結果
-  if(!kw && !whF && !spotF && !locF){
+  if (!kw && !whF && !spotF && !locF) {
     document.getElementById('searchResultsContainer').style.display = 'none';
     searchResults = [];
     currentSearchPage = 1;
     return;
   }
   
-  // 篩選搜尋結果
   searchResults = [];
-  if(rawData && rawData.length > 1) {
-    searchResults = rawData.slice(1).filter(r=>{
-      if(!r || r.length <= Math.max(COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc, COLS.note)) return false;
+  if (rawData && rawData.length > 1) {
+    searchResults = rawData.slice(1).filter(r => {
+      if (!r || r.length <= Math.max(COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc, COLS.note)) return false;
       
-      const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.spot,COLS.loc,COLS.note].some(c=> 
+      const matchKw = !kw || [COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc, COLS.note].some(c => 
         (r[c] || '').toString().toLowerCase().includes(kw));
-      const matchWh = !whF || (r[COLS.wh] || '').trim() === whF;
-      const matchSpot = !spotF || (r[COLS.spot] || '').trim() === spotF;
-      const matchLoc = !locF || (r[COLS.loc] || '').trim() === locF;
+      const matchWh = !whF || (r[COLS.wh] || '').toString().trim() === whF;
+      const matchSpot = !spotF || (r[COLS.spot] || '').toString().trim() === spotF;
+      const matchLoc = !locF || (r[COLS.loc] || '').toString().trim() === locF;
       
       return matchKw && matchWh && matchSpot && matchLoc;
     });
   }
   
-  console.log('篩選結果:', searchResults); // 除錯用
+  console.log('篩選結果:', searchResults.length, '筆');
   
-  // 重置到第一頁 
   currentSearchPage = 1;
   renderSearchResultsPage();
 }
 
-// 渲染搜尋結果分頁 
-function renderSearchResultsPage(){
+// 渲染搜尋結果分頁 
+function renderSearchResultsPage() {
   const container = document.getElementById('searchResultsContainer');
   const tbody = document.getElementById('searchResultsTable');
   
-  if(searchResults.length === 0){
+  if (searchResults.length === 0) {
     container.style.display = 'block';
     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
     
-    // 更新分頁資訊
     document.getElementById('searchPageInfo').textContent = '無資料';
     document.getElementById('searchPrevPageBtn').disabled = true;
     document.getElementById('searchNextPageBtn').disabled = true;
     return;
   }
   
-  // 分頁處理
   const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
   const startIndex = (currentSearchPage - 1) * searchItemsPerPage;
   const endIndex = startIndex + searchItemsPerPage;
   const pageData = searchResults.slice(startIndex, endIndex);
   
   container.style.display = 'block';
-  tbody.innerHTML = pageData.map(r=>`
-    <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5)?'low-stock':''}">
+  tbody.innerHTML = pageData.map(r => `
+    <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? 'low-stock' : ''}">
       <td>${r[COLS.name] || '-'}</td>
       <td>${r[COLS.qty] || 0}</td>
       <td>${r[COLS.wh] || '-'}</td>
@@ -1022,15 +1326,14 @@ function renderSearchResultsPage(){
     </tr>
   `).join('');
   
-  // 更新分頁資訊
   document.getElementById('searchPageInfo').textContent = 
-    `ç¬¬ ${currentSearchPage} é ï¼Œå…± ${totalPages} é  (ç¸½è¨ˆ ${searchResults.length} ç­†)`;
+    `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)`;
   document.getElementById('searchPrevPageBtn').disabled = currentSearchPage <= 1;
   document.getElementById('searchNextPageBtn').disabled = currentSearchPage >= totalPages;
 }
 
 // 渲染歷史紀錄
-function renderHistory(){
+function renderHistory() {
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
   const dateStart = document.getElementById('historyDateStart').value;
@@ -1038,9 +1341,8 @@ function renderHistory(){
   const warehouse = document.getElementById('historyWarehouse').value;
   const locationSpot = document.getElementById('historyLocationSpot').value;
   
-  console.log('æ­·å²è³‡æ–™:', historyData); // 除錯用
+  console.log('歷史資料:', historyData.length, '筆');
   
-  // 篩選歷史紀錄
   let filteredData = historyData.filter(record => {
     if (!record || typeof record !== 'object') return false;
     
@@ -1050,21 +1352,21 @@ function renderHistory(){
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       
       const recordDate = new Date(record.timestamp);
-      if(isNaN(recordDate.getTime())) return false;
+      if (isNaN(recordDate.getTime())) return false;
       
       const recordDateStr = recordDate.toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDateStr >= startDate && recordDateStr <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDateStr >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDateStr <= endDate;
       }
     }
@@ -1072,7 +1374,6 @@ function renderHistory(){
     return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
-  // 分頁處理
   const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
   const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
   const endIndex = startIndex + historyItemsPerPage;
@@ -1080,9 +1381,8 @@ function renderHistory(){
   
   const historyList = document.getElementById('historyList');
   
-  if(pageData.length > 0){
+  if (pageData.length > 0) {
     historyList.innerHTML = pageData.map(record => {
-      // 安全檢查
       if (!record || !record.timestamp) {
         return '';
       }
@@ -1139,7 +1439,6 @@ function renderHistory(){
     `;
   }
   
-  // 更新分頁資訊
   document.getElementById('historyPageInfo').textContent = 
     totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
   document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
@@ -1169,9 +1468,8 @@ function exportToCSV(data, filename, headers) {
   document.body.removeChild(link);
 }
 
-// 匯出搜尋結果
 function exportSearchResults() {
-  if(searchResults.length === 0) {
+  if (searchResults.length === 0) {
     alert('沒有資料可匯出');
     return;
   }
@@ -1193,9 +1491,8 @@ function exportSearchResults() {
   exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
 }
 
-// 匯出低庫存清單
 function exportLowStock() {
-  if(lowStockData.length === 0) {
+  if (lowStockData.length === 0) {
     alert('沒有低庫存資料可匯出');
     return;
   }
@@ -1217,7 +1514,6 @@ function exportLowStock() {
   exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
 }
 
-// 匯出歷史紀錄
 function exportHistory() {
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
@@ -1226,7 +1522,6 @@ function exportHistory() {
   const warehouse = document.getElementById('historyWarehouse').value;
   const locationSpot = document.getElementById('historyLocationSpot').value;
   
-  // 篩選歷史紀錄
   let filteredData = historyData.filter(record => {
     const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
     const matchAction = !action || record.action === action;
@@ -1234,17 +1529,17 @@ function exportHistory() {
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       const recordDate = new Date(record.timestamp).toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDate >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDate <= endDate;
       }
     }
@@ -1252,7 +1547,7 @@ function exportHistory() {
     return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
-  if(filteredData.length === 0) {
+  if (filteredData.length === 0) {
     alert('沒有符合條件的歷史紀錄可匯出');
     return;
   }
@@ -1275,12 +1570,11 @@ function exportHistory() {
 }
 
 // 條碼掃描功能
-function startScanner(targetId){
+function startScanner(targetId) {
   currentScanTarget = targetId;
   const scanner = document.getElementById('barcodeScanner');
   scanner.style.display = 'flex';
   
-  // 初始化攝影機
   navigator.mediaDevices.getUserMedia({ 
     video: { 
       facingMode: "environment",
@@ -1292,7 +1586,6 @@ function startScanner(targetId){
     video.srcObject = stream;
     video.play();
     
-    // 初始化 Quagga
     Quagga.init({
       inputStream: {
         type: "LiveStream",
@@ -1327,33 +1620,26 @@ function startScanner(targetId){
       Quagga.start();
     });
     
-    // 掃描結果處理
     Quagga.onDetected(result => {
       const code = result.codeResult.code;
       document.getElementById(currentScanTarget).value = code;
       
-      // 如果掃描的是物料名稱相關欄位，觸發智能建議
       if (currentScanTarget === 'in_sn' || currentScanTarget === 'out_sn') {
-        // 根據序號自動填入對應的物料資訊
         const matchedItem = findItemBySerialNumber(code);
         if (matchedItem) {
-          const inputType = currentScanTarget.split('_')[0]; // 'in' or 'out'
+          const inputType = currentScanTarget.split('_')[0];
           const nameInput = document.getElementById(`${inputType}_name`);
           nameInput.value = matchedItem.name;
-          
-          // 觸發智能建議
           smartSuggestion.handleInput(`${inputType}_name`, matchedItem.name);
         }
       }
       
-      // 提供視覺回饋
       navigator.vibrate && navigator.vibrate(200);
       
       setTimeout(() => {
         stopScanner();
-         // 聚焦到下一個輸入框
         const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
-        if(nextInput && nextInput.querySelector('input')){
+        if (nextInput && nextInput.querySelector('input')) {
           nextInput.querySelector('input').focus();
         }
       }, 1000);
@@ -1366,10 +1652,10 @@ function startScanner(targetId){
   });
 }
 
-function stopScanner(){
+function stopScanner() {
   Quagga.stop();
   const video = document.getElementById('video');
-  if(video.srcObject){
+  if (video.srcObject) {
     video.srcObject.getTracks().forEach(track => track.stop());
     video.srcObject = null;
   }
@@ -1377,7 +1663,6 @@ function stopScanner(){
   currentScanTarget = null;
 }
 
-// 根據序號尋找物品
 function findItemBySerialNumber(serialNumber) {
   if (!rawData || rawData.length <= 1) return null;
   
@@ -1402,7 +1687,6 @@ function findItemBySerialNumber(serialNumber) {
   return null;
 }
 
-// 記錄出入庫歷史
 function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, sn, note) {
   const record = {
     timestamp: new Date().toISOString(),
@@ -1416,17 +1700,15 @@ function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, 
     note: note || ''
   };
   
-   console.log('新增歷史紀錄:', record); // 除錯用
+  console.log('新增歷史紀錄:', record);
   
   historyData.unshift(record);
   
-  // 限制歷史紀錄數量，避免記憶體過度使用
-  if(historyData.length > 1000) {
+  if (historyData.length > 1000) {
     historyData = historyData.slice(0, 1000);
   }
   
-  // 如果目前在歷史紀錄頁面，更新顯示
-  if(document.getElementById('history-tab').classList.contains('active')) {
+  if (document.getElementById('history-tab').classList.contains('active')) {
     renderHistory();
   }
 }
@@ -1450,23 +1732,34 @@ document.getElementById('inBtn').onclick = async () => {
     return;
   }
   
+  showStatus('<i class="fas fa-sync fa-spin"></i> 正在入庫...', 'info');
+  
   try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    const response = await fetch(API_URL, { 
+      method: "POST", 
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     
-    // 新增歷史紀錄
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, payload.note);
     
-    // 清空表單
     ['in_name', 'in_qty', 'in_wh', 'in_spot', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
       .forEach(id => document.getElementById(id).value = '');
     
-    // 隱藏智能建議
     smartSuggestion.hideSuggestions();
     
     await loadData();
-    alert("入庫成功！");
-  } catch (e) {
-    alert("入庫失敗：" + e.message);
+    showStatus("✅ 入庫成功！", 'success');
+    
+  } catch (error) {
+    console.error('入庫失敗:', error);
+    showStatus(`❌ 入庫失敗: ${error.message}`, 'danger');
   }
 };
 
@@ -1487,7 +1780,6 @@ document.getElementById('outBtn').onclick = async () => {
     return;
   }
   
-  // 檢查庫存是否足夠
   const stockItem = findStockItem(payload.name);
   const requestedQty = parseInt(payload.qty);
   
@@ -1501,18 +1793,27 @@ document.getElementById('outBtn').onclick = async () => {
     }
   }
   
+  showStatus('<i class="fas fa-sync fa-spin"></i> 正在出庫...', 'info');
+  
   try {
-    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    const response = await fetch(API_URL, { 
+      method: "POST", 
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     
-    // 新增歷史紀錄
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, '');
     
-    // 清空表單
     ['out_name', 'out_qty', 'out_wh', 'out_spot', 'out_loc', 'out_sn']
       .forEach(id => {
         const input = document.getElementById(id);
         input.value = '';
-        // 重置樣式
         if (id === 'out_qty') {
           input.style.borderColor = '';
           input.style.backgroundColor = '';
@@ -1521,14 +1822,15 @@ document.getElementById('outBtn').onclick = async () => {
         }
       });
     
-   // 隱藏智能建議和警告
     smartSuggestion.hideSuggestions();
     hideStockWarning();
     
     await loadData();
-    alert("出庫成功！");
-  } catch (e) {
-    alert("出庫失敗：" + e.message);
+    showStatus("✅ 出庫成功！", 'success');
+    
+  } catch (error) {
+    console.error('出庫失敗:', error);
+    showStatus(`❌ 出庫失敗: ${error.message}`, 'danger');
   }
 };
 
@@ -1547,7 +1849,6 @@ document.getElementById('refreshBtn').onclick = () => {
   loadData();
 };
 
-// 匯出按鈕事件綁定
 document.getElementById('exportSearchBtn').onclick = exportSearchResults;
 document.getElementById('exportLowStockBtn').onclick = exportLowStock;
 document.getElementById('exportHistoryBtn').onclick = exportHistory;
@@ -1578,12 +1879,10 @@ document.getElementById('historyLocationSpot').onchange = () => {
   renderHistory();
 };
 document.getElementById('historyRefreshBtn').onclick = () => {
-  // 搜尋按鈕：只執行搜尋，不清除篩選條件
   currentHistoryPage = 1;
   renderHistory();
 };
 
-// 清除所有篩選條件按鈕
 document.getElementById('historyClearBtn').onclick = () => {
   document.getElementById('historySearch').value = '';
   document.getElementById('historyAction').value = '';
@@ -1594,7 +1893,6 @@ document.getElementById('historyClearBtn').onclick = () => {
   currentHistoryPage = 1;
   renderHistory();
   
-  / 同時清除搜尋結果
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
   document.getElementById('locationSpotFilter').value = '';
@@ -1606,7 +1904,7 @@ document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
 document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
 document.getElementById('closeScannerBtn').onclick = stopScanner;
 
-/ 低庫存分頁控制
+// 低庫存分頁控制
 document.getElementById('prevPageBtn').onclick = () => {
   if (currentPage > 1) {
     currentPage--;
@@ -1638,7 +1936,7 @@ document.getElementById('searchNextPageBtn').onclick = () => {
   }
 };
 
-/ 歷史紀錄分頁控制
+// 歷史紀錄分頁控制
 document.getElementById('historyPrevBtn').onclick = () => {
   if (currentHistoryPage > 1) {
     currentHistoryPage--;
@@ -1654,7 +1952,6 @@ document.getElementById('historyNextBtn').onclick = () => {
   const warehouse = document.getElementById('historyWarehouse').value;
   const locationSpot = document.getElementById('historyLocationSpot').value;
   
-  // 計算篩選後的資料數量
   let filteredData = historyData.filter(record => {
     const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
     const matchAction = !action || record.action === action;
@@ -1662,17 +1959,17 @@ document.getElementById('historyNextBtn').onclick = () => {
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       const recordDate = new Date(record.timestamp).toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDate >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDate <= endDate;
       }
     }
@@ -1687,28 +1984,63 @@ document.getElementById('historyNextBtn').onclick = () => {
   }
 };
 
-// 標籤頁切換事件
 document.getElementById('history-tab').onclick = () => {
-  // 當切換到歷史紀錄頁面時，載入歷史資料
   setTimeout(() => {
-    if(!historyData.length) {
+    if (!historyData.length) {
       loadHistoryData();
     }
   }, 100);
 };
 
+// 除錯工具事件綁定
+document.getElementById('testApiUrl').value = API_URL;
+document.getElementById('testApiBtn').onclick = () => {
+  const customUrl = document.getElementById('testApiUrl').value.trim();
+  testApiConnection(customUrl);
+};
+
+document.getElementById('checkDataBtn').onclick = checkDataStructure;
+
+document.getElementById('clearCacheBtn').onclick = () => {
+  rawData = [];
+  historyData = [];
+  lowStockData = [];
+  searchResults = [];
+  updateDebugInfo('快取已清除');
+  showStatus('✅ 快取已清除', 'success');
+};
+
+document.getElementById('resetSystemBtn').onclick = () => {
+  if (confirm('確定要重置系統嗎？這將清除所有資料並重新載入。')) {
+    rawData = [];
+    historyData = [];
+    lowStockData = [];
+    searchResults = [];
+    currentPage = 1;
+    currentHistoryPage = 1;
+    currentSearchPage = 1;
+    
+    document.querySelectorAll('input, select').forEach(input => {
+      if (input.type !== 'button' && input.type !== 'submit') {
+        input.value = '';
+      }
+    });
+    
+    updateDebugInfo('系統已重置');
+    loadData();
+  }
+};
+
 // 初始化
+updateDebugInfo('系統啟動中...');
 loadData();
 setupOutQuantityValidation();
 
-// 防止頁面刷新時攝影機未正確關閉
 window.addEventListener('beforeunload', stopScanner);
 
-// 當頁面載入完成後，初始化智能建議系統
 document.addEventListener('DOMContentLoaded', () => {
   smartSuggestion.init();
 });
 </script>
 </body>
 </html>
-
