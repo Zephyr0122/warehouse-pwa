@@ -330,6 +330,118 @@
         let inventoryData = [];
         let historyData = [];
         
+        // JSONP 工具函數
+        class JSONPHelper {
+            static callbackCounter = 0;
+            
+            static request(url, params = {}) {
+                return new Promise((resolve, reject) => {
+                    const callbackName = `jsonp_callback_${Date.now()}_${++this.callbackCounter}`;
+                    
+                    // 設置全域回調函數
+                    window[callbackName] = (data) => {
+                        // 清理
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        resolve(data);
+                    };
+                    
+                    // 建構URL參數
+                    const queryString = Object.keys(params)
+                        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                        .join('&');
+                    
+                    const finalUrl = `${url}?callback=${callbackName}${queryString ? '&' + queryString : ''}`;
+                    
+                    // 創建script標籤
+                    const script = document.createElement('script');
+                    script.src = finalUrl;
+                    
+                    // 錯誤處理
+                    script.onerror = () => {
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        reject(new Error('JSONP request failed'));
+                    };
+                    
+                    // 超時處理
+                    const timeout = setTimeout(() => {
+                        delete window[callbackName];
+                        if (script.parentNode) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP request timeout'));
+                    }, 30000); // 30秒超時
+                    
+                    // 成功時清除超時
+                    const originalCallback = window[callbackName];
+                    window[callbackName] = (data) => {
+                        clearTimeout(timeout);
+                        originalCallback(data);
+                    };
+                    
+                    // 添加到頁面
+                    document.head.appendChild(script);
+                });
+            }
+            
+            static post(url, data) {
+                return new Promise((resolve, reject) => {
+                    const callbackName = `jsonp_callback_${Date.now()}_${++this.callbackCounter}`;
+                    
+                    // 設置全域回調函數
+                    window[callbackName] = (response) => {
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        resolve(response);
+                    };
+                    
+                    // 將POST數據作為URL參數傳遞
+                    const params = {
+                        callback: callbackName,
+                        method: 'POST',
+                        ...data
+                    };
+                    
+                    const queryString = Object.keys(params)
+                        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                        .join('&');
+                    
+                    const finalUrl = `${url}?${queryString}`;
+                    
+                    // 創建script標籤
+                    const script = document.createElement('script');
+                    script.src = finalUrl;
+                    
+                    // 錯誤處理
+                    script.onerror = () => {
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        reject(new Error('JSONP POST request failed'));
+                    };
+                    
+                    // 超時處理
+                    const timeout = setTimeout(() => {
+                        delete window[callbackName];
+                        if (script.parentNode) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP POST request timeout'));
+                    }, 30000);
+                    
+                    // 成功時清除超時
+                    const originalCallback = window[callbackName];
+                    window[callbackName] = (response) => {
+                        clearTimeout(timeout);
+                        originalCallback(response);
+                    };
+                    
+                    // 添加到頁面
+                    document.head.appendChild(script);
+                });
+            }
+        }
+        
         // 智能建議系統
         class SmartSuggestion {
             constructor(inputId) {
@@ -372,7 +484,6 @@
                 const normalizedKeyword = keyword.toLowerCase();
                 const suggestions = [];
                 
-                // 修正：使用正確的欄位順序 品名(0), 數量(1), 倉庫(2), 地點(3), 位置(4), 序號(5), 備註(6), 低庫存警戒(7), 最後更新(8)
                 inventoryData.slice(1).forEach(row => {
                     if (!row || row.length < 6) return;
                     
@@ -524,16 +635,12 @@
         async function loadInventoryData() {
             try {
                 showLoading();
-                const response = await fetch(API_URL, {
-                    method: 'GET',
-                    headers: { 'Cache-Control': 'no-cache' }
+                
+                // 使用JSONP載入庫存資料
+                inventoryData = await JSONPHelper.request(API_URL, {
+                    t: Date.now() // 防止快取
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                inventoryData = await response.json();
                 updateStatistics();
                 renderLowStockTable();
                 updateFilters();
@@ -547,16 +654,12 @@
         
         async function loadHistoryData() {
             try {
-                const response = await fetch(API_URL + "?action=getHistory", {
-                    method: 'GET',
-                    headers: { 'Cache-Control': 'no-cache' }
+                // 使用JSONP載入歷史記錄
+                historyData = await JSONPHelper.request(API_URL, {
+                    action: 'getHistory',
+                    t: Date.now()
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                historyData = await response.json();
                 renderHistoryList();
             } catch (error) {
                 console.error('載入歷史記錄失敗:', error);
@@ -576,7 +679,6 @@
             
             let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
             
-            // 修正：使用正確的欄位索引 數量(1), 低庫存警戒(7)
             inventoryData.slice(1).forEach(row => {
                 if (!row || row.length < 3) return;
                 
@@ -639,7 +741,6 @@
             const warehouses = new Set();
             const locations = new Set();
             
-            // 修正：使用正確的欄位索引 倉庫(2), 地點(3)
             inventoryData.slice(1).forEach(row => {
                 if (row && row.length > 4) {
                     if (row[2] && row[2].trim()) warehouses.add(row[2].trim());
@@ -673,7 +774,6 @@
             const results = inventoryData.slice(1).filter(row => {
                 if (!row || row.length < 7) return false;
                 
-                // 修正：使用正確的欄位索引 品名(0), 序號(5), 倉庫(2), 地點(3)
                 const matchKeyword = !keyword || 
                     (row[0] || '').toString().toLowerCase().includes(keyword) ||
                     (row[5] || '').toString().toLowerCase().includes(keyword);
@@ -845,7 +945,6 @@
                 return;
             }
             
-            // 修正：使用正確的欄位索引進行匹配 品名(0), 倉庫(2), 地點(3), 位置(4), 序號(5)
             const stockItem = inventoryData.slice(1).find(row => {
                 if (!row || row.length < 6) return false;
                 
@@ -857,7 +956,7 @@
             });
             
             if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0; // 數量(1)
+                const availableQty = parseInt(stockItem[1]) || 0;
                 
                 if (requestedQty > availableQty) {
                     warningDiv.innerHTML = `
@@ -904,17 +1003,9 @@
             
             try {
                 showLoading();
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    //headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
+                // 使用JSONP POST
+                const result = await JSONPHelper.post(API_URL, payload);
                 
                 if (result.status === 'success') {
                     ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note']
@@ -953,7 +1044,6 @@
                 return;
             }
             
-            // 修正：使用正確的欄位索引檢查庫存
             const stockItem = inventoryData.slice(1).find(row => {
                 if (!row || row.length < 6) return false;
                 
@@ -965,7 +1055,7 @@
             });
             
             if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0; // 數量(1)
+                const availableQty = parseInt(stockItem[1]) || 0;
                 const requestedQty = parseInt(qty);
                 
                 if (requestedQty > availableQty) {
@@ -986,17 +1076,9 @@
             
             try {
                 showLoading();
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    //headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
+                // 使用JSONP POST
+                const result = await JSONPHelper.post(API_URL, payload);
                 
                 if (result.status === 'success') {
                     ['out_name', 'out_qty', 'out_warehouse', 'out_locationSpot', 'out_location', 'out_sn']
@@ -1106,6 +1188,3 @@
     </script>
 </body>
 </html>
-
-
-
