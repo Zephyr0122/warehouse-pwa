@@ -201,78 +201,6 @@
     <i class="fas fa-sync fa-spin"></i> 正在初始化系統...
   </div>
 
-  <!-- Google Apps Script 部署檢查工具 -->
-  <div class="api-tester">
-    <h5><i class="fas fa-cog text-warning"></i> Google Apps Script 部署檢查</h5>
-    
-    <div class="alert alert-warning">
-      <strong><i class="fas fa-exclamation-triangle"></i> 重要提醒</strong><br>
-      如果所有測試都顯示 "Failed to fetch"，請檢查以下設定：
-    </div>
-    
-    <div class="mb-3">
-      <h6>📋 Google Apps Script 部署檢查清單：</h6>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="check1">
-        <label class="form-check-label" for="check1">
-          已點擊「部署」→「新增部署作業」
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="check2">
-        <label class="form-check-label" for="check2">
-          類型選擇「網路應用程式」
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="check3">
-        <label class="form-check-label" for="check3">
-          存取權限設為「任何人都可以存取」
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="check4">
-        <label class="form-check-label" for="check4">
-          已複製新的「網路應用程式 URL」
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="check5">
-        <label class="form-check-label" for="check5">
-          試算表名稱包含「倉庫管理」工作表
-        </label>
-      </div>
-    </div>
-    
-    <div class="mb-3">
-      <button class="btn btn-warning" onclick="showDeploymentGuide()">
-        <i class="fas fa-book"></i> 顯示部署教學
-      </button>
-      <button class="btn btn-info" onclick="testAlternativeUrls()">
-        <i class="fas fa-search"></i> 測試備用連結
-      </button>
-    </div>
-    
-    <div id="deploymentGuide" class="alert alert-info" style="display: none;">
-      <h6><i class="fas fa-lightbulb"></i> 重新部署 Google Apps Script 步驟：</h6>
-      <ol>
-        <li>開啟 Google Apps Script 專案</li>
-        <li>點擊右上角「部署」按鈕</li>
-        <li>選擇「新增部署作業」</li>
-        <li>類型選擇「網路應用程式」</li>
-        <li>權限設定：
-          <ul>
-            <li>執行身分：「我」</li>
-            <li>存取權限：<strong>「任何人都可以存取」</strong></li>
-          </ul>
-        </li>
-        <li>點擊「部署」</li>
-        <li>複製新的「網路應用程式 URL」</li>
-        <li>將新 URL 貼到下方測試框中</li>
-      </ol>
-    </div>
-  </div>
-
   <!-- API測試工具區域 -->
   <div class="api-tester">
     <h5><i class="fas fa-tools text-primary"></i> API 連線診斷工具</h5>
@@ -342,15 +270,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// 配置 - 請更新為正確的 Web App URL
+// 配置
 const API_URL = "https://script.google.com/macros/s/AKfycbzNbybTy_0vFGLR0hSeFW7FlXGbv44ho1P_xPMv6aE6WBRZuVOpTYXlGvElkdE4Veo/exec";
-
-// 備用測試 URLs（如果主 URL 失效）
-const TEST_URLS = [
-  "const API_URL = "https://script.google.com/macros/s/AKfycby7V9qRhO54Cdnjy5w5z6CIgWPQheTjaJrnf843BcXVHYEqvYNDJq5hnPHg7gwnWUg/exec?action=getInventory";
-",
-  // 用戶可以在這裡添加其他測試 URL
-];
 
 let rawData = [];
 let lastResponse = null;
@@ -619,39 +540,11 @@ async function testResponseFormat() {
   }
 }
 
-// 顯示部署教學
-function showDeploymentGuide() {
-  const guide = document.getElementById('deploymentGuide');
-  guide.style.display = guide.style.display === 'none' ? 'block' : 'none';
-}
-
-// 測試備用 URLs
-async function testAlternativeUrls() {
-  showTestResult('正在測試備用連結...', 'info');
-  
-  for (let i = 0; i < TEST_URLS.length; i++) {
-    const url = TEST_URLS[i];
-    showTestResult(`測試連結 ${i + 1}/${TEST_URLS.length}: ${url}`, 'info');
-    
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        timeout: 10000
-      });
-      
-      if (response.ok) {
-        showTestResult(`✅ 連結 ${i + 1} 可用！回應狀態: ${response.status}`, 'success');
-        document.getElementById('testApiUrl').value = url;
-        return;
-      } else {
-        showTestResult(`❌ 連結 ${i + 1} 回應錯誤: ${response.status}`, 'error');
-      }
-    } catch (error) {
-      showTestResult(`❌ 連結 ${i + 1} 無法連接: ${error.message}`, 'error');
-    }
-  }
-  
-  showTestResult('❌ 所有備用連結都無法使用，請重新部署 Google Apps Script', 'error');
+function showTestResult(message, type) {
+  const resultsDiv = document.getElementById('testResults');
+  resultsDiv.style.display = 'block';
+  resultsDiv.className = `test-result test-${type}`;
+  resultsDiv.textContent = message;
 }
 
 // 顯示搜尋結果
@@ -783,4 +676,3 @@ window.addEventListener('error', event => {
 </script>
 </body>
 </html>
-
