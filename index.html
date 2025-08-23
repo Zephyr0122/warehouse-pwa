@@ -1,1283 +1,1081 @@
-<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>倉庫物料管理系統</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { 
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .main-container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin: 20px 0;
-        }
-        
-        .low-stock {
-            background-color: #fff3cd !important;
-        }
-        
-        .out-of-stock {
-            background-color: #f8d7da !important;
-        }
-        
-        .suggestion-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 0 0 5px 5px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-        
-        .suggestion-item {
-            padding: 10px;
-            cursor: pointer;
-            border-bottom: 1px solid #f8f9fa;
-        }
-        
-        .suggestion-item:hover, .suggestion-item.active {
-            background-color: #e9ecef;
-        }
-        
-        .input-container {
-            position: relative;
-        }
-        
-        .history-item {
-            border-left: 4px solid #6c757d;
-            margin-bottom: 10px;
-        }
-        
-        .history-item.in { 
-            border-left-color: #28a745; 
-        }
-        
-        .history-item.out { 
-            border-left-color: #dc3545; 
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>倉庫物料管理（PWA）</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { -webkit-tap-highlight-color: transparent; }
+  .big-btn { padding: .65rem; font-size: 1rem; }
+  .small-input { padding: .45rem .6rem; font-size: .95rem; }
+  .low-stock { background-color: #fff3cd !important; }
+  .out-of-stock { background-color: #f8d7da !important; }
+  .scroll-table { max-height: 250px; overflow-y: auto; }
+  
+  /* 條碼掃描器樣式優化 */
+  .barcode-scanner { 
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.95); z-index: 9999; display: none;
+    justify-content: center; align-items: center; flex-direction: column;
+  }
+  #video { 
+    width: 90%; max-width: 400px; height: auto;
+    border: 2px solid #28a745; border-radius: 10px;
+    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+  }
+  .scanner-overlay {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px; height: 150px;
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  .scanner-corner {
+    position: absolute; width: 20px; height: 20px;
+    border: 3px solid #28a745;
+  }
+  .scanner-corner.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+  .scanner-corner.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+  .scanner-corner.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+  .scanner-corner.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+  
+  .scanner-info {
+    color: white; text-align: center; margin-top: 20px;
+    font-size: 1.1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+  
+  /* 查詢結果區域 */
+  .search-results { max-height: 300px; overflow-y: auto; }
+  
+  /* 分頁按鈕 */
+  .pagination-controls {
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    margin-top: 10px;
+  }
+  .page-info {
+    font-size: 0.9rem; color: #6c757d;
+    min-width: 100px; text-align: center;
+  }
+  
+  /* 歷史紀錄樣式 */
+  .history-record {
+    border-left: 3px solid #007bff;
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+  .history-record.in {
+    border-left-color: #28a745;
+  }
+  .history-record.out {
+    border-left-color: #dc3545;
+  }
+  
+  /* 匯出按鈕樣式 */
+  .export-btn {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+  }
+  .export-btn:hover {
+    background: linear-gradient(135deg, #138496, #117a8b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  /* 標籤頁樣式 */
+  .nav-tabs .nav-link {
+    border-radius: 8px 8px 0 0;
+    margin-right: 2px;
+  }
+  .nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+    color: white !important;
+  }
+</style>
 </head>
-<body>
-    <div class="container">
-        <div class="main-container p-4">
-            <h2 class="text-center mb-4">
-                <i class="fas fa-warehouse text-primary"></i> 
-                倉庫物料管理系統
-            </h2>
-            
-            <!-- 導航標籤 -->
-            <ul class="nav nav-pills justify-content-center mb-4" id="mainTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="inventory-tab" data-bs-toggle="pill" data-bs-target="#inventory" type="button">
-                        <i class="fas fa-boxes"></i> 庫存管理
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="search-tab" data-bs-toggle="pill" data-bs-target="#search" type="button">
-                        <i class="fas fa-search"></i> 查詢統計
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history" type="button">
-                        <i class="fas fa-history"></i> 歷史記錄
-                    </button>
-                </li>
-            </ul>
-            
-            <div class="tab-content" id="mainTabsContent">
-                <!-- 庫存管理頁面 -->
-                <div class="tab-pane fade show active" id="inventory" role="tabpanel">
-                    <div class="row">
-                        <!-- 入庫 -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header bg-success text-white">
-                                    <h5><i class="fas fa-plus-circle"></i> 入庫作業</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="input-container mb-3">
-                                        <input id="in_name" class="form-control" placeholder="物料名稱" autocomplete="off">
-                                        <div id="in_suggestions" class="suggestion-dropdown"></div>
-                                    </div>
-                                    <div class="row mb-3">
-                                        <div class="col-6">
-                                            <input id="in_qty" type="number" min="1" class="form-control" placeholder="數量">
-                                        </div>
-                                        <div class="col-6">
-                                            <input id="in_threshold" type="number" min="0" class="form-control" placeholder="警戒值" value="5">
-                                        </div>
-                                    </div>
-                                    <input id="in_warehouse" class="form-control mb-3" placeholder="倉庫">
-                                    <input id="in_locationSpot" class="form-control mb-3" placeholder="地點">
-                                    <input id="in_location" class="form-control mb-3" placeholder="位置">
-                                    <input id="in_sn" class="form-control mb-3" placeholder="序號">
-                                    <textarea id="in_note" class="form-control mb-3" placeholder="備註" rows="2"></textarea>
-                                    <button id="inBtn" class="btn btn-success w-100">
-                                        <i class="fas fa-plus"></i> 確認入庫
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 出庫 -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header bg-danger text-white">
-                                    <h5><i class="fas fa-minus-circle"></i> 出庫作業</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="input-container mb-3">
-                                        <input id="out_name" class="form-control" placeholder="物料名稱" autocomplete="off">
-                                        <div id="out_suggestions" class="suggestion-dropdown"></div>
-                                    </div>
-                                    <input id="out_qty" type="number" min="1" class="form-control mb-3" placeholder="數量">
-                                    <input id="out_warehouse" class="form-control mb-3" placeholder="倉庫">
-                                    <input id="out_locationSpot" class="form-control mb-3" placeholder="地點">
-                                    <input id="out_location" class="form-control mb-3" placeholder="位置">
-                                    <input id="out_sn" class="form-control mb-3" placeholder="序號">
-                                    <div id="stockWarning" class="alert alert-warning d-none">
-                                        <i class="fas fa-exclamation-triangle"></i> 庫存不足警告
-                                    </div>
-                                    <button id="outBtn" class="btn btn-danger w-100">
-                                        <i class="fas fa-minus"></i> 確認出庫
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 低庫存警告 -->
-                    <div class="card">
-                        <div class="card-header bg-warning text-dark">
-                            <h5><i class="fas fa-exclamation-triangle"></i> 低庫存警告</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lowStockTable">
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted">載入中...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 查詢統計頁面 -->
-                <div class="tab-pane fade" id="search" role="tabpanel">
-                    <div class="card mb-4">
-                        <div class="card-header bg-primary text-white">
-                            <h5><i class="fas fa-search"></i> 庫存查詢</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <input id="searchKeyword" class="form-control" placeholder="搜尋物料名稱/序號">
-                                </div>
-                                <div class="col-md-2">
-                                    <select id="searchWarehouse" class="form-select">
-                                        <option value="">全部倉庫</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select id="searchLocation" class="form-select">
-                                        <option value="">全部地點</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <button id="searchBtn" class="btn btn-primary w-100">
-                                        <i class="fas fa-search"></i> 查詢
-                                    </button>
-                                </div>
-                                <div class="col-md-2">
-                                    <button id="exportBtn" class="btn btn-success w-100">
-                                        <i class="fas fa-download"></i> 匯出
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th><th>更新時間</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="searchResultTable">
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted">請輸入搜尋條件</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 統計資訊 -->
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h3 id="totalItems" class="text-primary">0</h3>
-                                    <p class="mb-0">總物料數</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h3 id="lowStockCount" class="text-warning">0</h3>
-                                    <p class="mb-0">低庫存</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h3 id="outOfStockCount" class="text-danger">0</h3>
-                                    <p class="mb-0">無庫存</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h3 id="totalQuantity" class="text-success">0</h3>
-                                    <p class="mb-0">總數量</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 歷史記錄頁面 -->
-                <div class="tab-pane fade" id="history" role="tabpanel">
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h5><i class="fas fa-history"></i> 出入庫歷史記錄</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <input id="historySearch" class="form-control" placeholder="搜尋物料名稱">
-                                </div>
-                                <div class="col-md-2">
-                                    <select id="historyAction" class="form-select">
-                                        <option value="">全部動作</option>
-                                        <option value="入庫">入庫</option>
-                                        <option value="出庫">出庫</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <input id="historyDateStart" type="date" class="form-control">
-                                </div>
-                                <div class="col-md-2">
-                                    <input id="historyDateEnd" type="date" class="form-control">
-                                </div>
-                                <div class="col-md-2">
-                                    <button id="historySearchBtn" class="btn btn-info w-100">
-                                        <i class="fas fa-search"></i> 搜尋
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div id="historyList" style="max-height: 500px; overflow-y: auto;">
-                                <div class="text-center text-muted py-4">
-                                    <i class="fas fa-history fa-2x mb-3"></i>
-                                    <p>載入歷史記錄中...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<body class="bg-light">
+<div class="container py-3">
+  <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
+
+  <!-- 主要功能標籤頁 -->
+  <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button" role="tab">
+        <i class="fas fa-boxes"></i> 物料管理
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+        <i class="fas fa-history"></i> 歷史紀錄
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="mainTabsContent">
+    <!-- 物料管理頁面 -->
+    <div class="tab-pane fade show active" id="management" role="tabpanel">
+      <!-- 查詢 -->
+      <div class="card p-3 mb-3">
+        <h5>🔍 查詢</h5>
+        <div class="d-flex gap-2 mb-3">
+            <input id="search" class="form-control small-input" placeholder="搜尋">
+            <select id="warehouseFilter" class="form-select small-input" multiple>
+                <option value="">全部倉庫</option>
+            </select>
+            <select id="locationTypeFilter" class="form-select small-input" multiple>
+                <option value="">全部地點</option>
+            </select>
+            <select id="locationFilter" class="form-select small-input" multiple>
+                <option value="">全部位置</option>
+            </select>
+            <button id="refreshBtn" class="btn btn-outline-primary big-btn">重新整理</button>
         </div>
-    </div>
-    
-    <!-- 載入中動畫 -->
-    <div id="loading" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 9999; display: none !important;">
-        <div class="spinner-border text-light" role="status">
-            <span class="visually-hidden">載入中...</span>
+        
+        <!-- 查詢結果 -->
+        <div id="searchResultsContainer" style="display: none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
+            <button id="exportSearchBtn" class="btn btn-sm export-btn">
+              <i class="fas fa-download"></i> 匯出CSV
+            </button>
+          </div>
+          <div class="search-results">
+            <table class="table table-sm table-striped">
+              <thead class="table-primary">
+                <tr>
+                  <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
+                </tr>
+              </thead>
+              <tbody id="searchResultsTable"></tbody>
+            </table>
+          </div>
+          <!-- 查詢結果分頁控制 -->
+          <div class="pagination-controls">
+            <button id="searchPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              <i class="fas fa-chevron-left"></i> 上一頁
+            </button>
+            <span id="searchPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+            <button id="searchNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              下一頁 <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- 入庫 -->
+      <div class="card p-3 mb-3">
+        <h5>➕ 入庫</h5>
+        <input id="in_name" class="form-control small-input mb-2" placeholder="物料名稱">
+        <div class="input-group mb-2">
+          <input id="in_qty" type="number" min="1" class="form-control small-input" placeholder="數量">
+          <input id="in_threshold" type="number" min="0" class="form-control small-input" placeholder="低庫存警戒值">
+        </div>
+        <input id="in_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="in_locType" class="form-control small-input mb-2" placeholder="地點">
+        <input id="in_loc" class="form-control small-input mb-2" placeholder="位置">
+        <div class="input-group mb-2">
+          <input id="in_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+          <button id="scanInSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
+        </div>
+        <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
+        <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
+      </div>
+
+      <!-- 出庫 -->
+      <div class="card p-3 mb-3">
+        <h5>➖ 出庫</h5>
+        <input id="out_name" class="form-control small-input mb-2" placeholder="物料名稱">
+        <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
+        <input id="out_wh" class="form-control small-input mb-2" placeholder="倉庫">
+        <input id="out_locType" class="form-control small-input mb-2" placeholder="地點">
+        <input id="out_loc" class="form-control small-input mb-2" placeholder="位置">
+        <div class="input-group mb-2">
+          <input id="out_sn" class="form-control small-input" placeholder="序號（可掃碼）">
+          <button id="scanOutSnBtn" class="btn btn-outline-secondary"><i class="fas fa-barcode"></i></button>
+        </div>
+        <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
+      </div>
+
+      <!-- 低庫存告警 -->
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
+          <button id="exportLowStockBtn" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> 匯出低庫存清單
+          </button>
+        </div>
+        <div class="scroll-table">
+          <table class="table table-sm table-striped">
+            <thead class="table-dark">
+              <tr>
+                <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
+              </tr>
+            </thead>
+            <tbody id="lowStockTable"></tbody>
+          </table>
+        </div>
+        <!-- 分頁控制 -->
+        <div class="pagination-controls">
+          <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            <i class="fas fa-chevron-left"></i> 上一頁
+          </button>
+          <span id="pageInfo" class="page-info">第 1 頁，共 1 頁</span>
+          <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            下一頁 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // 設定 API URL
-        const API_URL = "https://script.google.com/macros/s/AKfycby7V9qRhO54Cdnjy5w5z6CIgWPQheTjaJrnf843BcXVHYEqvYNDJq5hnPHg7gwnWUg/exec";
+    <!-- 歷史紀錄頁面 -->
+    <div class="tab-pane fade" id="history" role="tabpanel">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="fas fa-history text-info"></i> 出入庫歷史紀錄</h5>
+          <button id="exportHistoryBtn" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> 匯出歷史紀錄
+          </button>
+        </div>
         
-        // 全域變數
-        let inventoryData = [];
-        let historyData = [];
+        <!-- 歷史紀錄篩選器 -->
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
+          </div>
+          <div class="col-md-2">
+            <select id="historyAction" class="form-select small-input">
+              <option value="">全部動作</option>
+              <option value="入庫">入庫</option>
+              <option value="出庫">出庫</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small text-muted mb-1">開始日期</label>
+            <input id="historyDateStart" type="date" class="form-control small-input">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small text-muted mb-1">結束日期</label>
+            <input id="historyDateEnd" type="date" class="form-control small-input">
+          </div>
+          <div class="col-md-2">
+            <select id="historyWarehouse" class="form-select small-input" multiple>
+              <option value="">全部倉庫</option>
+            </select>
+          </div>
+          <div class="col-md-1 d-flex flex-column gap-1">
+            <button id="historyRefreshBtn" class="btn btn-outline-primary btn-sm" title="搜尋">
+              <i class="fas fa-search"></i>
+            </button>
+            <button id="historyClearBtn" class="btn btn-outline-secondary btn-sm" title="清除所有篩選條件">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
         
-        // API請求工具類，支援JSONP和fetch回退
-        class APIHelper {
-            static callbackCounter = 0;
-            static useJSONP = true; // 可以切換使用方式
-            
-            static async request(url, params = {}, method = 'GET') {
-                if (this.useJSONP && method === 'GET') {
-                    try {
-                        return await this.jsonpRequest(url, params);
-                    } catch (error) {
-                        console.warn('JSONP failed, falling back to fetch:', error);
-                        this.useJSONP = false;
-                        return await this.fetchRequest(url, params, method);
-                    }
-                } else {
-                    return await this.fetchRequest(url, params, method);
-                }
-            }
-            
-            static async post(url, data) {
-                if (this.useJSONP) {
-                    try {
-                        return await this.jsonpPost(url, data);
-                    } catch (error) {
-                        console.warn('JSONP POST failed, falling back to fetch:', error);
-                        this.useJSONP = false;
-                        return await this.fetchRequest(url, data, 'POST');
-                    }
-                } else {
-                    return await this.fetchRequest(url, data, 'POST');
-                }
-            }
-            
-            static jsonpRequest(url, params = {}) {
-                return new Promise((resolve, reject) => {
-                    const callbackName = `jsonp_callback_${Date.now()}_${++this.callbackCounter}`;
-                    
-                    // 設置全域回調函數
-                    window[callbackName] = (data) => {
-                        // 清理
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        resolve(data);
-                    };
-                    
-                    // 建構URL參數
-                    const queryString = Object.keys(params)
-                        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-                        .join('&');
-                    
-                    const finalUrl = `${url}?callback=${callbackName}${queryString ? '&' + queryString : ''}`;
-                    console.log('JSONP Request URL:', finalUrl);
-                    
-                    // 創建script標籤
-                    const script = document.createElement('script');
-                    script.src = finalUrl;
-                    
-                    // 錯誤處理
-                    script.onerror = (e) => {
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        console.error('JSONP script error:', e);
-                        reject(new Error(`JSONP request failed: ${e.message || 'Script load error'}`));
-                    };
-                    
-                    script.onload = () => {
-                        // 如果script載入成功但沒有調用回調，可能是不支援JSONP
-                        setTimeout(() => {
-                            if (window[callbackName]) {
-                                delete window[callbackName];
-                                if (script.parentNode) {
-                                    document.head.removeChild(script);
-                                }
-                                reject(new Error('JSONP callback not called - server may not support JSONP'));
-                            }
-                        }, 5000);
-                    };
-                    
-                    // 超時處理
-                    const timeout = setTimeout(() => {
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        reject(new Error('JSONP request timeout'));
-                    }, 30000);
-                    
-                    // 成功時清除超時
-                    const originalCallback = window[callbackName];
-                    window[callbackName] = (data) => {
-                        clearTimeout(timeout);
-                        originalCallback(data);
-                    };
-                    
-                    // 添加到頁面
-                    document.head.appendChild(script);
-                });
-            }
-            
-            static jsonpPost(url, data) {
-                return new Promise((resolve, reject) => {
-                    const callbackName = `jsonp_callback_${Date.now()}_${++this.callbackCounter}`;
-                    
-                    // 設置全域回調函數
-                    window[callbackName] = (response) => {
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        resolve(response);
-                    };
-                    
-                    // 將POST數據作為URL參數傳遞
-                    const params = {
-                        callback: callbackName,
-                        ...data
-                    };
-                    
-                    const queryString = Object.keys(params)
-                        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-                        .join('&');
-                    
-                    const finalUrl = `${url}?${queryString}`;
-                    console.log('JSONP POST URL:', finalUrl);
-                    
-                    // 創建script標籤
-                    const script = document.createElement('script');
-                    script.src = finalUrl;
-                    
-                    // 錯誤處理
-                    script.onerror = (e) => {
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        console.error('JSONP POST script error:', e);
-                        reject(new Error(`JSONP POST request failed: ${e.message || 'Script load error'}`));
-                    };
-                    
-                    script.onload = () => {
-                        setTimeout(() => {
-                            if (window[callbackName]) {
-                                delete window[callbackName];
-                                if (script.parentNode) {
-                                    document.head.removeChild(script);
-                                }
-                                reject(new Error('JSONP POST callback not called'));
-                            }
-                        }, 5000);
-                    };
-                    
-                    // 超時處理
-                    const timeout = setTimeout(() => {
-                        delete window[callbackName];
-                        if (script.parentNode) {
-                            document.head.removeChild(script);
-                        }
-                        reject(new Error('JSONP POST request timeout'));
-                    }, 30000);
-                    
-                    // 成功時清除超時
-                    const originalCallback = window[callbackName];
-                    window[callbackName] = (response) => {
-                        clearTimeout(timeout);
-                        originalCallback(response);
-                    };
-                    
-                    // 添加到頁面
-                    document.head.appendChild(script);
-                });
-            }
-            
-            static async fetchRequest(url, data, method = 'GET') {
-                const options = {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                };
-                
-                if (method === 'GET') {
-                    if (data && Object.keys(data).length > 0) {
-                        const params = new URLSearchParams(data);
-                        url += '?' + params.toString();
-                    }
-                } else {
-                    options.body = JSON.stringify(data);
-                }
-                
-                console.log(`Fetch ${method} request to:`, url);
-                
-                const response = await fetch(url, options);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return await response.json();
-            }
+        <!-- 歷史紀錄列表 -->
+        <div id="historyContainer">
+          <div class="scroll-table" style="max-height: 400px;">
+            <div id="historyList"></div>
+          </div>
+          
+          <!-- 歷史紀錄分頁控制 -->
+          <div class="pagination-controls">
+            <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              <i class="fas fa-chevron-left"></i> 上一頁
+            </button>
+            <span id="historyPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+            <button id="historyNextBtn" class="btn btn-sm btn-outline-secondary" disabled>
+              下一頁 <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 條碼掃描器 -->
+<div id="barcodeScanner" class="barcode-scanner">
+  <video id="video" playsinline></video>
+  <div class="scanner-overlay">
+    <div class="scanner-corner top-left"></div>
+    <div class="scanner-corner top-right"></div>
+    <div class="scanner-corner bottom-left"></div>
+    <div class="scanner-corner bottom-right"></div>
+  </div>
+  <div class="scanner-info">
+    <p><i class="fas fa-barcode"></i> 請將條碼對準掃描框</p>
+    <button id="closeScannerBtn" class="btn btn-danger btn-lg">
+      <i class="fas fa-times"></i> 關閉掃描器
+    </button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby7V9qRhO54Cdnjy5w5z6CIgWPQheTjaJrnf843BcXVHYEqvYNDJq5hnPHg7gwnWUg/exec";
+const COLS = { id:0, name:1, qty:2, wh:3, locType:4, loc:5, sn:6, note:7, th:8, date:9 };
+let rawData = [];
+let historyData = [];
+let currentScanTarget = null;
+let lowStockData = [];
+let searchResults = []; // 新增：搜尋結果資料
+let currentPage = 1;
+let currentHistoryPage = 1;
+let currentSearchPage = 1; // 新增：搜尋結果分頁
+const itemsPerPage = 5;
+const historyItemsPerPage = 10;
+const searchItemsPerPage = 10; // 新增：搜尋結果每頁顯示數量
+
+// 讀取資料
+async function loadData(){
+  try {
+    const res = await fetch(API_URL);
+    rawData = await res.json();
+    renderFilters();
+    updateLowStockData();
+    renderLowStock();
+    renderSearchResults();
+  } catch(e){ 
+    console.error("讀取失敗:", e);
+    alert("讀取資料失敗，請檢查網路連線或API設定"); 
+  }
+}
+
+// 載入歷史紀錄
+async function loadHistoryData(){
+  try {
+    const res = await fetch(API_URL + "?action=getHistory");
+    historyData = await res.json();
+    renderHistoryFilters();
+    renderHistory();
+  } catch(e){ 
+    console.error("讀取歷史紀錄失敗:", e);
+    // 如果無法載入歷史紀錄，初始化為空陣列
+    historyData = [];
+    renderHistoryFilters();
+    renderHistory();
+  }
+}
+
+function renderFilters(){
+  const whSet = new Set(), locTypeSet = new Set(), locSet = new Set();
+  rawData.slice(1).forEach(r=>{
+    if(r[COLS.wh]) whSet.add(r[COLS.wh]);
+    if(r[COLS.locType]) locTypeSet.add(r[COLS.locType]);
+    if(r[COLS.loc]) locSet.add(r[COLS.loc]);
+  });
+  
+  const whSel = document.getElementById('warehouseFilter');
+  const locTypeSel = document.getElementById('locationTypeFilter');
+  const locSel = document.getElementById('locationFilter');
+  
+  whSel.innerHTML = '<option value="">全部倉庫</option>';
+  locTypeSel.innerHTML = '<option value="">全部地點</option>';
+  locSel.innerHTML = '<option value="">全部位置</option>';
+  
+  Array.from(whSet).sort().forEach(w=> whSel.innerHTML += `<option value="${w}">${w}</option>`);
+  Array.from(locTypeSet).sort().forEach(lt=> locTypeSel.innerHTML += `<option value="${lt}">${lt}</option>`);
+  Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
+}
+
+// 渲染歷史紀錄篩選器
+function renderHistoryFilters(){
+  const whSet = new Set();
+  historyData.forEach(record => {
+    if(record.warehouse) whSet.add(record.warehouse);
+  });
+  
+  const historyWhSel = document.getElementById('historyWarehouse');
+  historyWhSel.innerHTML = '<option value="">全部倉庫</option>';
+  Array.from(whSet).sort().forEach(w => 
+    historyWhSel.innerHTML += `<option value="${w}">${w}</option>`
+  );
+}
+
+// 更新低庫存資料
+function updateLowStockData(){
+  lowStockData = rawData.slice(1).filter(r=>{
+    const qty = parseInt(r[COLS.qty]) || 0;
+    const threshold = parseInt(r[COLS.th]) || 5;
+    return qty <= threshold;
+  });
+  currentPage = 1;
+}
+
+// 渲染低庫存告警（分頁）
+function renderLowStock(){
+  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const pageData = lowStockData.slice(startIndex, endIndex);
+  
+  const tbody = document.getElementById('lowStockTable');
+  tbody.innerHTML = pageData.map(r=>`
+    <tr class="${parseInt(r[COLS.qty])===0?'out-of-stock':'low-stock'}">
+      <td>${r[COLS.name] || '-'}</td>
+      <td>${r[COLS.qty] || 0}</td>
+      <td>${r[COLS.th] || 5}</td>
+      <td>${r[COLS.wh] || '-'}</td>
+      <td>${r[COLS.locType] || '-'}</td>
+      <td>${r[COLS.loc] || '-'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="text-center text-muted">無低庫存物料</td></tr>';
+  
+  // 更新分頁資訊
+  document.getElementById('pageInfo').textContent = 
+    totalPages > 0 ? `第 ${currentPage} 頁，共 ${totalPages} 頁 (總計 ${lowStockData.length} 筆)` : '無資料';
+  document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+  document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+}
+
+// 渲染歷史紀錄
+function renderHistory(){
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  console.log('歷史資料:', historyData); // 除錯用
+  
+  // 篩選歷史紀錄
+  let filteredData = historyData.filter(record => {
+    if (!record || typeof record !== 'object') return false;
+    
+    const matchSearch = !search || (record.material && record.material.toLowerCase().includes(search));
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      if(!record.timestamp) return false;
+      
+      const recordDate = new Date(record.timestamp);
+      if(isNaN(recordDate.getTime())) return false;
+      
+      const recordDateStr = recordDate.toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDateStr >= startDate && recordDateStr <= endDate;
+      } else if(startDate){
+        matchDate = recordDateStr >= startDate;
+      } else if(endDate){
+        matchDate = recordDateStr <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  // 分頁處理
+  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
+  const endIndex = startIndex + historyItemsPerPage;
+  const pageData = filteredData.slice(startIndex, endIndex);
+  
+  const historyList = document.getElementById('historyList');
+  
+  if(pageData.length > 0){
+    historyList.innerHTML = pageData.map(record => {
+      // 安全檢查
+      if (!record || !record.timestamp) {
+        return '';
+      }
+      
+      const date = new Date(record.timestamp);
+      const dateStr = isNaN(date.getTime()) ? '日期錯誤' : date.toLocaleDateString('zh-TW');
+      const timeStr = isNaN(date.getTime()) ? '時間錯誤' : date.toLocaleTimeString('zh-TW');
+      
+      const action = record.action || '未知動作';
+      const material = record.material || '未知物料';
+      const quantity = record.quantity || 0;
+      const warehouse = record.warehouse || '-';
+      const location = record.location || '-';
+      const serialNumber = record.serialNumber || '';
+      const note = record.note || '';
+      
+      return `
+        <div class="history-record ${action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center mb-1">
+                <i class="fas ${action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                <strong>${action}</strong>
+                <span class="badge ${action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                  ${quantity} 件
+                </span>
+              </div>
+              <div class="text-muted small">
+                <div><strong>${material}</strong></div>
+                <div>
+                  <i class="fas fa-warehouse me-1"></i>${warehouse} 
+                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${location}
+                </div>
+                ${serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${serialNumber}</div>` : ''}
+                ${note ? `<div><i class="fas fa-sticky-note me-1"></i>${note}</div>` : ''}
+              </div>
+            </div>
+            <div class="text-end text-muted small">
+              <div>${dateStr}</div>
+              <div>${timeStr}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).filter(html => html).join('');
+  } else {
+    historyList.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="fas fa-search fa-2x mb-3"></i>
+        <p>無此紀錄</p>
+      </div>
+    `;
+  }
+  
+  // 更新分頁資訊
+  document.getElementById('historyPageInfo').textContent = 
+    totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
+  document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
+  document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
+}
+
+// 獲取選擇框的選中值（支援複選）
+function getSelectedValues(selectId) {
+  const select = document.getElementById(selectId);
+  const values = [];
+  for (let option of select.selectedOptions) {
+    if (option.value !== '') {
+      values.push(option.value);
+    }
+  }
+  return values;
+}
+
+// 渲染搜尋結果（新增分頁功能）
+function renderSearchResults(){
+  const kw = document.getElementById('search').value.trim().toLowerCase();
+  const whF = getSelectedValues('warehouseFilter');
+  const locTypeF = getSelectedValues('locationTypeFilter');
+  const locF = getSelectedValues('locationFilter');
+  
+  // 如果沒有任何搜尋條件，隱藏搜尋結果
+  if(!kw && whF.length === 0 && locTypeF.length === 0 && locF.length === 0){
+    document.getElementById('searchResultsContainer').style.display = 'none';
+    return;
+  }
+  
+  // 篩選結果
+  searchResults = rawData.slice(1).filter(r=>{
+    const matchKw = !kw || [COLS.name,COLS.sn,COLS.wh,COLS.locType,COLS.loc,COLS.note].some(c=> 
+      (r[c] || '').toString().toLowerCase().includes(kw));
+    const matchWh = whF.length === 0 || whF.includes(r[COLS.wh]);
+    const matchLocType = locTypeF.length === 0 || locTypeF.includes(r[COLS.locType]);
+    const matchLoc = locF.length === 0 || locF.includes(r[COLS.loc]);
+    return matchKw && matchWh && matchLocType && matchLoc;
+  });
+  
+  currentSearchPage = 1; // 重置搜尋分頁
+  renderSearchResultsPage();
+}
+
+// 渲染搜尋結果分頁
+function renderSearchResultsPage() {
+  const container = document.getElementById('searchResultsContainer');
+  const tbody = document.getElementById('searchResultsTable');
+  
+  if(searchResults.length > 0){
+    container.style.display = 'block';
+    
+    // 分頁處理
+    const totalPages = Math.ceil(searchResults.length / searchItemsPerPage);
+    const startIndex = (currentSearchPage - 1) * searchItemsPerPage;
+    const endIndex = startIndex + searchItemsPerPage;
+    const pageData = searchResults.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = pageData.map(r=>`
+      <tr class="${parseInt(r[COLS.qty])<=parseInt(r[COLS.th]||5)?'low-stock':''}">
+        <td>${r[COLS.name] || '-'}</td>
+        <td>${r[COLS.qty] || 0}</td>
+        <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.locType] || '-'}</td>
+        <td>${r[COLS.loc] || '-'}</td>
+        <td><small>${r[COLS.sn] || '-'}</small></td>
+        <td><small>${r[COLS.note] || '-'}</small></td>
+      </tr>
+    `).join('');
+    
+    // 更新分頁資訊
+    document.getElementById('searchPageInfo').textContent = 
+      totalPages > 0 ? `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)` : '無資料';
+    document.getElementById('searchPrevBtn').disabled = currentSearchPage <= 1;
+    document.getElementById('searchNextBtn').disabled = currentSearchPage >= totalPages;
+  } else {
+    container.style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
+    document.getElementById('searchPageInfo').textContent = '無資料';
+    document.getElementById('searchPrevBtn').disabled = true;
+    document.getElementById('searchNextBtn').disabled = true;
+  }
+}
+
+// CSV 匯出功能
+function exportToCSV(data, filename, headers) {
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => 
+      row.map(cell => 
+        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
+          ? `"${cell.replace(/"/g, '""')}"` : cell
+      ).join(',')
+    )
+  ].join('\n');
+  
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// 匯出搜尋結果
+function exportSearchResults() {
+  if(searchResults.length === 0) {
+    alert('沒有資料可匯出');
+    return;
+  }
+  
+  const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新日期'];
+  const exportData = searchResults.map(r => [
+    r[COLS.name] || '',
+    r[COLS.qty] || 0,
+    r[COLS.wh] || '',
+    r[COLS.locType] || '',
+    r[COLS.loc] || '',
+    r[COLS.sn] || '',
+    r[COLS.note] || '',
+    r[COLS.th] || 5,
+    r[COLS.date] || ''
+  ]);
+  
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
+}
+
+// 匯出低庫存清單
+function exportLowStock() {
+  if(lowStockData.length === 0) {
+    alert('沒有低庫存資料可匯出');
+    return;
+  }
+  
+  const headers = ['物料名稱', '當前數量', '警戒值', '倉庫', '地點', '位置', '序號', '備註', '狀態'];
+  const exportData = lowStockData.map(r => [
+    r[COLS.name] || '',
+    r[COLS.qty] || 0,
+    r[COLS.th] || 5,
+    r[COLS.wh] || '',
+    r[COLS.locType] || '',
+    r[COLS.loc] || '',
+    r[COLS.sn] || '',
+    r[COLS.note] || '',
+    parseInt(r[COLS.qty]) === 0 ? '無庫存' : '低庫存'
+  ]);
+  
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
+}
+
+// 匯出歷史紀錄
+function exportHistory() {
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  // 篩選歷史紀錄
+  let filteredData = historyData.filter(record => {
+    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      const recordDate = new Date(record.timestamp).toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if(startDate){
+        matchDate = recordDate >= startDate;
+      } else if(endDate){
+        matchDate = recordDate <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  if(filteredData.length === 0) {
+    alert('沒有符合條件的歷史紀錄可匯出');
+    return;
+  }
+  
+  const headers = ['日期時間', '動作', '物料名稱', '數量', '倉庫', '位置', '序號', '備註'];
+  const exportData = filteredData.map(record => [
+    new Date(record.timestamp).toLocaleString('zh-TW'),
+    record.action,
+    record.material,
+    record.quantity,
+    record.warehouse || '',
+    record.location || '',
+    record.serialNumber || '',
+    record.note || ''
+  ]);
+  
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+  exportToCSV(exportData, `出入庫歷史紀錄_${timestamp}.csv`, headers);
+}
+
+// 條碼掃描功能
+function startScanner(targetId){
+  currentScanTarget = targetId;
+  const scanner = document.getElementById('barcodeScanner');
+  scanner.style.display = 'flex';
+  
+  // 初始化攝影機
+  navigator.mediaDevices.getUserMedia({ 
+    video: { 
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 480 }
+    } 
+  }).then(stream => {
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.play();
+    
+    // 初始化 Quagga
+    Quagga.init({
+      inputStream: {
+        type: "LiveStream",
+        target: video,
+        constraints: {
+          width: 640,
+          height: 480,
+          facingMode: "environment"
         }
-        
-        // 智能建議系統
-        class SmartSuggestion {
-            constructor(inputId) {
-                this.inputId = inputId;
-                this.suggestionsId = inputId.replace('_name', '_suggestions');
-                this.currentSuggestions = [];
-                this.selectedIndex = -1;
-                this.init();
-            }
-            
-            init() {
-                const input = document.getElementById(this.inputId);
-                const suggestionsDiv = document.getElementById(this.suggestionsId);
-                
-                if (!input || !suggestionsDiv) return;
-                
-                input.addEventListener('input', (e) => this.handleInput(e.target.value));
-                input.addEventListener('keydown', (e) => this.handleKeydown(e));
-                
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.input-container')) {
-                        this.hideSuggestions();
-                    }
-                });
-            }
-            
-            handleInput(value) {
-                if (value.length < 1) {
-                    this.hideSuggestions();
-                    return;
-                }
-                
-                const suggestions = this.findSimilarItems(value);
-                this.showSuggestions(suggestions);
-            }
-            
-            findSimilarItems(keyword) {
-                if (!inventoryData || inventoryData.length <= 1) return [];
-                
-                const normalizedKeyword = keyword.toLowerCase();
-                const suggestions = [];
-                
-                inventoryData.slice(1).forEach(row => {
-                    if (!row || row.length < 6) return;
-                    
-                    const [name, qty, warehouse, locationSpot, location, sn, note, threshold, lastUpdate] = row;
-                    const normalizedName = (name || '').toString().toLowerCase();
-                    const normalizedSn = (sn || '').toString().toLowerCase();
-                    
-                    let score = 0;
-                    if (normalizedName === normalizedKeyword) score = 100;
-                    else if (normalizedName.startsWith(normalizedKeyword)) score = 90;
-                    else if (normalizedName.includes(normalizedKeyword)) score = 70;
-                    else if (normalizedSn.includes(normalizedKeyword)) score = 60;
-                    
-                    if (score > 0) {
-                        suggestions.push({
-                            score,
-                            name: name || '',
-                            qty: parseInt(qty) || 0,
-                            warehouse: warehouse || '',
-                            locationSpot: locationSpot || '',
-                            location: location || '',
-                            serialNumber: sn || '',
-                            note: note || '',
-                            threshold: parseInt(threshold) || 5,
-                            lastUpdate: lastUpdate || '',
-                            data: row
-                        });
-                    }
-                });
-                
-                return suggestions.sort((a, b) => b.score - a.score).slice(0, 5);
-            }
-            
-            showSuggestions(suggestions) {
-                const suggestionsDiv = document.getElementById(this.suggestionsId);
-                this.currentSuggestions = suggestions;
-                this.selectedIndex = -1;
-                
-                if (suggestions.length === 0) {
-                    this.hideSuggestions();
-                    return;
-                }
-                
-                suggestionsDiv.innerHTML = suggestions.map((item, index) => `
-                    <div class="suggestion-item" data-index="${index}">
-                        <div class="fw-bold">${item.name}</div>
-                        <div class="text-muted small">
-                            庫存: ${item.qty} 件 | ${item.warehouse} - ${item.locationSpot} - ${item.location}
-                        </div>
-                        ${item.serialNumber ? `<div class="text-success small">序號: ${item.serialNumber}</div>` : ''}
-                    </div>
-                `).join('');
-                
-                suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
-                    item.addEventListener('click', () => this.selectSuggestion(index));
-                });
-                
-                suggestionsDiv.style.display = 'block';
-            }
-            
-            hideSuggestions() {
-                const suggestionsDiv = document.getElementById(this.suggestionsId);
-                if (suggestionsDiv) {
-                    suggestionsDiv.style.display = 'none';
-                    suggestionsDiv.innerHTML = '';
-                }
-                this.currentSuggestions = [];
-                this.selectedIndex = -1;
-            }
-            
-            handleKeydown(e) {
-                if (this.currentSuggestions.length === 0) return;
-                
-                switch (e.key) {
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        this.moveSelection(1);
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        this.moveSelection(-1);
-                        break;
-                    case 'Enter':
-                        e.preventDefault();
-                        if (this.selectedIndex >= 0) {
-                            this.selectSuggestion(this.selectedIndex);
-                        }
-                        break;
-                    case 'Escape':
-                        this.hideSuggestions();
-                        break;
-                }
-            }
-            
-            moveSelection(direction) {
-                const maxIndex = this.currentSuggestions.length - 1;
-                this.selectedIndex += direction;
-                
-                if (this.selectedIndex > maxIndex) this.selectedIndex = 0;
-                else if (this.selectedIndex < 0) this.selectedIndex = maxIndex;
-                
-                const suggestionsDiv = document.getElementById(this.suggestionsId);
-                const items = suggestionsDiv.querySelectorAll('.suggestion-item');
-                items.forEach((item, index) => {
-                    item.classList.toggle('active', index === this.selectedIndex);
-                });
-            }
-            
-            selectSuggestion(index) {
-                if (index < 0 || index >= this.currentSuggestions.length) return;
-                
-                const suggestion = this.currentSuggestions[index];
-                const inputType = this.inputId.split('_')[0];
-                
-                document.getElementById(this.inputId).value = suggestion.name;
-                
-                if (inputType === 'in') {
-                    document.getElementById('in_warehouse').value = suggestion.warehouse;
-                    document.getElementById('in_locationSpot').value = suggestion.locationSpot;
-                    document.getElementById('in_location').value = suggestion.location;
-                    document.getElementById('in_threshold').value = suggestion.threshold;
-                    document.getElementById('in_qty').focus();
-                } else {
-                    document.getElementById('out_warehouse').value = suggestion.warehouse;
-                    document.getElementById('out_locationSpot').value = suggestion.locationSpot;
-                    document.getElementById('out_location').value = suggestion.location;
-                    document.getElementById('out_sn').value = suggestion.serialNumber;
-                    
-                    const qtyInput = document.getElementById('out_qty');
-                    qtyInput.focus();
-                    qtyInput.setAttribute('placeholder', `數量 (目前庫存: ${suggestion.qty} 件)`);
-                }
-                
-                this.hideSuggestions();
-            }
+      },
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      },
+      numOfWorkers: 2,
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader", 
+          "ean_8_reader",
+          "code_39_reader"
+        ]
+      },
+      locate: true
+    }, err => {
+      if (err) {
+        console.error("Quagga初始化失敗:", err);
+        alert("無法啟動條碼掃描器：" + err.message);
+        stopScanner();
+        return;
+      }
+      Quagga.start();
+    });
+    
+    // 掃描結果處理
+    Quagga.onDetected(result => {
+      const code = result.codeResult.code;
+      document.getElementById(currentScanTarget).value = code;
+      
+      // 提供視覺回饋
+      navigator.vibrate && navigator.vibrate(200);
+      
+      setTimeout(() => {
+        stopScanner();
+        // 聚焦到下一個輸入框
+        const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
+        if(nextInput && nextInput.querySelector('input')){
+          nextInput.querySelector('input').focus();
         }
-        
-        const inSuggestion = new SmartSuggestion('in_name');
-        const outSuggestion = new SmartSuggestion('out_name');
-        
-        function showLoading() {
-            document.getElementById('loading').style.display = 'flex';
-        }
-        
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-        
-        async function loadInventoryData() {
-            try {
-                showLoading();
-                
-                // 使用新的APIHelper載入庫存資料
-                inventoryData = await APIHelper.request(API_URL, {
-                    t: Date.now() // 防止快取
-                });
-                
-                updateStatistics();
-                renderLowStockTable();
-                updateFilters();
-                hideLoading();
-            } catch (error) {
-                console.error('載入庫存資料失敗:', error);
-                alert(`載入資料失敗：${error.message}\n\n請確認：\n1. Google Apps Script是否已部署\n2. 服務器是否支援JSONP格式\n3. 網路連線是否正常`);
-                hideLoading();
-            }
-        }
-        
-        async function loadHistoryData() {
-            try {
-                // 使用新的APIHelper載入歷史記錄
-                historyData = await APIHelper.request(API_URL, {
-                    action: 'getHistory',
-                    t: Date.now()
-                });
-                
-                renderHistoryList();
-            } catch (error) {
-                console.error('載入歷史記錄失敗:', error);
-                historyData = [];
-                renderHistoryList();
-            }
-        }
-        
-        function updateStatistics() {
-            if (!inventoryData || inventoryData.length <= 1) {
-                document.getElementById('totalItems').textContent = '0';
-                document.getElementById('lowStockCount').textContent = '0';
-                document.getElementById('outOfStockCount').textContent = '0';
-                document.getElementById('totalQuantity').textContent = '0';
-                return;
-            }
-            
-            let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
-            
-            inventoryData.slice(1).forEach(row => {
-                if (!row || row.length < 3) return;
-                
-                const qty = parseInt(row[1]) || 0;
-                const threshold = parseInt(row[7]) || 5;
-                
-                totalItems++;
-                totalQuantity += qty;
-                
-                if (qty === 0) outOfStockCount++;
-                else if (qty <= threshold) lowStockCount++;
-            });
-            
-            document.getElementById('totalItems').textContent = totalItems;
-            document.getElementById('lowStockCount').textContent = lowStockCount;
-            document.getElementById('outOfStockCount').textContent = outOfStockCount;
-            document.getElementById('totalQuantity').textContent = totalQuantity;
-        }
-        
-        function renderLowStockTable() {
-            const tbody = document.getElementById('lowStockTable');
-            if (!inventoryData || inventoryData.length <= 1) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">無資料</td></tr>';
-                return;
-            }
-            
-            const lowStockItems = inventoryData.slice(1).filter(row => {
-                if (!row || row.length < 8) return false;
-                const qty = parseInt(row[1]) || 0;
-                const threshold = parseInt(row[7]) || 5;
-                return qty <= threshold;
-            });
-            
-            if (lowStockItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">目前無低庫存物料</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = lowStockItems.map(row => {
-                const qty = parseInt(row[1]) || 0;
-                const threshold = parseInt(row[7]) || 5;
-                const className = qty === 0 ? 'out-of-stock' : 'low-stock';
-                
-                return `
-                    <tr class="${className}">
-                        <td>${row[0] || '-'}</td>
-                        <td><strong>${qty}</strong></td>
-                        <td>${threshold}</td>
-                        <td>${row[2] || '-'}</td>
-                        <td>${row[3] || '-'}</td>
-                        <td>${row[4] || '-'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-        function updateFilters() {
-            if (!inventoryData || inventoryData.length <= 1) return;
-            
-            const warehouses = new Set();
-            const locations = new Set();
-            
-            inventoryData.slice(1).forEach(row => {
-                if (row && row.length > 4) {
-                    if (row[2] && row[2].trim()) warehouses.add(row[2].trim());
-                    if (row[3] && row[3].trim()) locations.add(row[3].trim());
-                }
-            });
-            
-            const warehouseSelect = document.getElementById('searchWarehouse');
-            warehouseSelect.innerHTML = '<option value="">全部倉庫</option>';
-            Array.from(warehouses).sort().forEach(w => {
-                warehouseSelect.innerHTML += `<option value="${w}">${w}</option>`;
-            });
-            
-            const locationSelect = document.getElementById('searchLocation');
-            locationSelect.innerHTML = '<option value="">全部地點</option>';
-            Array.from(locations).sort().forEach(l => {
-                locationSelect.innerHTML += `<option value="${l}">${l}</option>`;
-            });
-        }
-        
-        function performSearch() {
-            const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
-            const warehouse = document.getElementById('searchWarehouse').value;
-            const location = document.getElementById('searchLocation').value;
-            
-            if (!inventoryData || inventoryData.length <= 1) {
-                renderSearchResults([]);
-                return;
-            }
-            
-            const results = inventoryData.slice(1).filter(row => {
-                if (!row || row.length < 7) return false;
-                
-                const matchKeyword = !keyword || 
-                    (row[0] || '').toString().toLowerCase().includes(keyword) ||
-                    (row[5] || '').toString().toLowerCase().includes(keyword);
-                const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
-                const matchLocation = !location || (row[3] || '').trim() === location;
-                
-                return matchKeyword && matchWarehouse && matchLocation;
-            });
-            
-            renderSearchResults(results);
-        }
-        
-        function renderSearchResults(results) {
-            const tbody = document.getElementById('searchResultTable');
-            
-            if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">查無符合條件的資料</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = results.map(row => {
-                const qty = parseInt(row[1]) || 0;
-                const threshold = parseInt(row[7]) || 5;
-                const className = qty <= threshold ? (qty === 0 ? 'out-of-stock' : 'low-stock') : '';
-                
-                return `
-                    <tr class="${className}">
-                        <td>${row[0] || '-'}</td>
-                        <td><strong>${qty}</strong></td>
-                        <td>${row[2] || '-'}</td>
-                        <td>${row[3] || '-'}</td>
-                        <td>${row[4] || '-'}</td>
-                        <td><small>${row[5] || '-'}</small></td>
-                        <td><small>${row[6] || '-'}</small></td>
-                        <td><small>${row[8] || '-'}</small></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-        function renderHistoryList() {
-            const historyContainer = document.getElementById('historyList');
-            
-            if (!historyData || historyData.length === 0) {
-                historyContainer.innerHTML = `
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-inbox fa-2x mb-3"></i>
-                        <p>暫無歷史記錄</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            const search = document.getElementById('historySearch').value.trim().toLowerCase();
-            const action = document.getElementById('historyAction').value;
-            const dateStart = document.getElementById('historyDateStart').value;
-            const dateEnd = document.getElementById('historyDateEnd').value;
-            
-            let filteredData = historyData.filter(record => {
-                if (!record) return false;
-                
-                const matchSearch = !search || 
-                    (record.material && record.material.toLowerCase().includes(search));
-                const matchAction = !action || record.action === action;
-                
-                let matchDate = true;
-                if (dateStart || dateEnd) {
-                    if (!record.timestamp) return false;
-                    const recordDate = new Date(record.timestamp);
-                    if (isNaN(recordDate.getTime())) return false;
-                    
-                    if (dateStart && dateEnd) {
-                        const start = new Date(dateStart);
-                        const end = new Date(dateEnd + 'T23:59:59');
-                        matchDate = recordDate >= start && recordDate <= end;
-                    } else if (dateStart) {
-                        const start = new Date(dateStart);
-                        matchDate = recordDate >= start;
-                    } else if (dateEnd) {
-                        const end = new Date(dateEnd + 'T23:59:59');
-                        matchDate = recordDate <= end;
-                    }
-                }
-                
-                return matchSearch && matchAction && matchDate;
-            });
-            
-            filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            filteredData = filteredData.slice(0, 50);
-            
-            historyContainer.innerHTML = filteredData.map(record => {
-                const date = new Date(record.timestamp);
-                const dateStr = isNaN(date.getTime()) ? '日期錯誤' : 
-                    date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW');
-                
-                return `
-                    <div class="card mb-2 history-item ${record.action === '入庫' ? 'in' : 'out'}">
-                        <div class="card-body p-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
-                                        <strong>${record.action || '未知動作'}</strong>
-                                        <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
-                                            ${record.quantity || 0} 件
-                                        </span>
-                                    </div>
-                                    <div class="text-muted">
-                                        <div class="fw-bold mb-1">${record.material || '未知物料'}</div>
-                                        <div class="small">
-                                            <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'}
-                                            <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.locationSpot || '-'}
-                                            <i class="fas fa-cube ms-2 me-1"></i>${record.location || '-'}
-                                        </div>
-                                        ${record.serialNumber ? `<div class="small"><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
-                                        ${record.note ? `<div class="small"><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
-                                    </div>
-                                </div>
-                                <div class="text-end text-muted small">
-                                    <div>${dateStr}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function exportToCSV(data, filename, headers) {
-            const csvContent = [
-                headers.join(','),
-                ...data.map(row => 
-                    row.map(cell => 
-                        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
-                            ? `"${cell.replace(/"/g, '""')}"` : cell
-                    ).join(',')
-                )
-            ].join('\n');
-            
-            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        function validateOutQuantity() {
-            const nameInput = document.getElementById('out_name');
-            const qtyInput = document.getElementById('out_qty');
-            const warehouseInput = document.getElementById('out_warehouse');
-            const locationSpotInput = document.getElementById('out_locationSpot');
-            const locationInput = document.getElementById('out_location');
-            const snInput = document.getElementById('out_sn');
-            const warningDiv = document.getElementById('stockWarning');
-            
-            const materialName = nameInput.value.trim();
-            const warehouse = warehouseInput.value.trim();
-            const locationSpot = locationSpotInput.value.trim();
-            const location = locationInput.value.trim();
-            const sn = snInput.value.trim();
-            const requestedQty = parseInt(qtyInput.value) || 0;
-            
-            if (!materialName || !requestedQty || !inventoryData || inventoryData.length <= 1) {
-                warningDiv.classList.add('d-none');
-                return;
-            }
-            
-            const stockItem = inventoryData.slice(1).find(row => {
-                if (!row || row.length < 6) return false;
-                
-                return (row[0] || '').toString().trim() === materialName &&
-                       (row[2] || '').toString().trim() === warehouse &&
-                       (row[3] || '').toString().trim() === locationSpot &&
-                       (row[4] || '').toString().trim() === location &&
-                       (row[5] || '').toString().trim() === sn;
-            });
-            
-            if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0;
-                
-                if (requestedQty > availableQty) {
-                    warningDiv.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i> 
-                        庫存不足：目前僅有 ${availableQty} 件
-                    `;
-                    warningDiv.classList.remove('d-none');
-                } else {
-                    warningDiv.classList.add('d-none');
-                }
-            } else {
-                warningDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    找不到指定的物料項目，請檢查資訊是否正確
-                `;
-                warningDiv.classList.remove('d-none');
-            }
-        }
-        
-        async function addStock() {
-            const name = document.getElementById('in_name').value.trim();
-            const qty = document.getElementById('in_qty').value.trim();
-            const warehouse = document.getElementById('in_warehouse').value.trim();
-            const locationSpot = document.getElementById('in_locationSpot').value.trim();
-            const location = document.getElementById('in_location').value.trim();
-            const sn = document.getElementById('in_sn').value.trim();
-            const note = document.getElementById('in_note').value.trim();
-            const threshold = document.getElementById('in_threshold').value.trim() || '5';
-            
-            if (!name || !qty) {
-                alert('物料名稱與數量為必填項目');
-                return;
-            }
-            
-            if (parseInt(qty) <= 0) {
-                alert('數量必須大於0');
-                return;
-            }
-            
-            const payload = {
-                action: "add",
-                name, qty, warehouse, locationSpot, location, sn, note, threshold
-            };
-            
-            try {
-                showLoading();
-                
-                // 使用新的APIHelper
-                const result = await APIHelper.post(API_URL, payload);
-                
-                if (result.status === 'success') {
-                    ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note']
-                        .forEach(id => document.getElementById(id).value = '');
-                    document.getElementById('in_threshold').value = '5';
-                    
-                    await loadInventoryData();
-                    alert('入庫成功！');
-                } else {
-                    alert('入庫失敗：' + (result.message || '未知錯誤'));
-                }
-                
-                hideLoading();
-            } catch (error) {
-                console.error('入庫失敗:', error);
-                alert(`入庫失敗：${error.message}\n\n可能原因：\n1. 服務器不支援此操作\n2. 網路連線問題\n3. 資料格式錯誤`);
-                hideLoading();
-            }
-        }
-        
-        async function removeStock() {
-            const name = document.getElementById('out_name').value.trim();
-            const qty = document.getElementById('out_qty').value.trim();
-            const warehouse = document.getElementById('out_warehouse').value.trim();
-            const locationSpot = document.getElementById('out_locationSpot').value.trim();
-            const location = document.getElementById('out_location').value.trim();
-            const sn = document.getElementById('out_sn').value.trim();
-            
-            if (!name || !qty) {
-                alert('物料名稱與數量為必填項目');
-                return;
-            }
-            
-            if (parseInt(qty) <= 0) {
-                alert('數量必須大於0');
-                return;
-            }
-            
-            const stockItem = inventoryData.slice(1).find(row => {
-                if (!row || row.length < 6) return false;
-                
-                return (row[0] || '').toString().trim() === name &&
-                       (row[2] || '').toString().trim() === warehouse &&
-                       (row[3] || '').toString().trim() === locationSpot &&
-                       (row[4] || '').toString().trim() === location &&
-                       (row[5] || '').toString().trim() === sn;
-            });
-            
-            if (stockItem) {
-                const availableQty = parseInt(stockItem[1]) || 0;
-                const requestedQty = parseInt(qty);
-                
-                if (requestedQty > availableQty) {
-                    const confirmOut = confirm(
-                        `警告：庫存不足！\n` +
-                        `要出庫的數量：${requestedQty} 件\n` +
-                        `目前庫存：${availableQty} 件\n\n` +
-                        `確定要繼續出庫嗎？`
-                    );
-                    if (!confirmOut) return;
-                }
-            }
-            
-            const payload = {
-                action: "delete",
-                name, qty, warehouse, locationSpot, location, sn
-            };
-            
-            try {
-                showLoading();
-                
-                // 使用新的APIHelper
-                const result = await APIHelper.post(API_URL, payload);
-                
-                if (result.status === 'success') {
-                    ['out_name', 'out_qty', 'out_warehouse', 'out_locationSpot', 'out_location', 'out_sn']
-                        .forEach(id => document.getElementById(id).value = '');
-                    
-                    document.getElementById('stockWarning').classList.add('d-none');
-                    
-                    await loadInventoryData();
-                    alert('出庫成功！');
-                } else {
-                    alert('出庫失敗：' + (result.message || '未知錯誤'));
-                }
-                
-                hideLoading();
-            } catch (error) {
-                console.error('出庫失敗:', error);
-                alert(`出庫失敗：${error.message}\n\n可能原因：\n1. 服務器不支援此操作\n2. 網路連線問題\n3. 資料格式錯誤`);
-                hideLoading();
-            }
-        }
-        
-        // 防抖函數，避免即時搜尋過於頻繁
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-        
-        // 事件綁定
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('inBtn').addEventListener('click', addStock);
-            document.getElementById('outBtn').addEventListener('click', removeStock);
-            document.getElementById('searchBtn').addEventListener('click', performSearch);
-            
-            document.getElementById('exportBtn').addEventListener('click', function() {
-                const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
-                const warehouse = document.getElementById('searchWarehouse').value;
-                const location = document.getElementById('searchLocation').value;
-                
-                if (!inventoryData || inventoryData.length <= 1) {
-                    alert('無資料可匯出');
-                    return;
-                }
-                
-                let results = inventoryData.slice(1);
-                
-                if (keyword || warehouse || location) {
-                    results = results.filter(row => {
-                        if (!row || row.length < 7) return false;
-                        
-                        const matchKeyword = !keyword || 
-                            (row[0] || '').toString().toLowerCase().includes(keyword) ||
-                            (row[5] || '').toString().toLowerCase().includes(keyword);
-                        const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
-                        const matchLocation = !location || (row[3] || '').trim() === location;
-                        
-                        return matchKeyword && matchWarehouse && matchLocation;
-                    });
-                }
-                
-                if (results.length === 0) {
-                    alert('無符合條件的資料可匯出');
-                    return;
-                }
-                
-                const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '低庫存警戒', '最後更新'];
-                const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
-                exportToCSV(results, `庫存查詢結果_${timestamp}.csv`, headers);
-            });
-            
-            // 出庫數量驗證
-            document.getElementById('out_qty').addEventListener('input', validateOutQuantity);
-            document.getElementById('out_name').addEventListener('blur', validateOutQuantity);
-            document.getElementById('out_warehouse').addEventListener('blur', validateOutQuantity);
-            document.getElementById('out_locationSpot').addEventListener('blur', validateOutQuantity);
-            document.getElementById('out_location').addEventListener('blur', validateOutQuantity);
-            document.getElementById('out_sn').addEventListener('blur', validateOutQuantity);
-            
-            // 使用防抖搜尋，避免過於頻繁
-            const debouncedSearch = debounce(performSearch, 300);
-            document.getElementById('searchKeyword').addEventListener('input', debouncedSearch);
-            document.getElementById('searchWarehouse').addEventListener('change', performSearch);
-            document.getElementById('searchLocation').addEventListener('change', performSearch);
-            
-            // 歷史記錄搜尋
-            const debouncedHistoryRender = debounce(renderHistoryList, 300);
-            document.getElementById('historySearchBtn').addEventListener('click', renderHistoryList);
-            document.getElementById('historySearch').addEventListener('input', debouncedHistoryRender);
-            document.getElementById('historyAction').addEventListener('change', renderHistoryList);
-            document.getElementById('historyDateStart').addEventListener('change', renderHistoryList);
-            document.getElementById('historyDateEnd').addEventListener('change', renderHistoryList);
-            
-            document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
-                if (historyData.length === 0) {
-                    loadHistoryData();
-                }
-            });
-            
-            loadInventoryData();
-        });
-    </script>
+      }, 1000);
+    });
+    
+  }).catch(err => {
+    console.error("無法存取攝影機:", err);
+    alert("無法開啟攝影機，請確認權限設定");
+    stopScanner();
+  });
+}
+
+function stopScanner(){
+  Quagga.stop();
+  const video = document.getElementById('video');
+  if(video.srcObject){
+    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+  }
+  document.getElementById('barcodeScanner').style.display = 'none';
+  currentScanTarget = null;
+}
+
+// 記錄出入庫歷史
+function addHistoryRecord(action, name, qty, warehouse, locationType, location, sn, note) {
+  const record = {
+    timestamp: new Date().toISOString(),
+    action: action || '',
+    material: name || '',
+    quantity: parseInt(qty) || 0,
+    warehouse: warehouse || '',
+    locationType: locationType || '',
+    location: location || '',
+    serialNumber: sn || '',
+    note: note || ''
+  };
+  
+  console.log('新增歷史紀錄:', record); // 除錯用
+  
+  historyData.unshift(record);
+  
+  // 限制歷史紀錄數量，避免記憶體過度使用
+  if(historyData.length > 1000) {
+    historyData = historyData.slice(0, 1000);
+  }
+  
+  // 如果目前在歷史紀錄頁面，更新顯示
+  if(document.getElementById('history-tab').classList.contains('active')) {
+    renderHistory();
+  }
+}
+
+// 入庫
+document.getElementById('inBtn').onclick = async () => {
+  const payload = {
+    action: "add",
+    name: document.getElementById('in_name').value.trim(),
+    qty: document.getElementById('in_qty').value.trim(),
+    warehouse: document.getElementById('in_wh').value.trim(),
+    location: document.getElementById('in_loc').value.trim(),
+    sn: document.getElementById('in_sn').value.trim(),
+    note: document.getElementById('in_note').value.trim(),
+    threshold: document.getElementById('in_threshold').value.trim() || "5"
+  };
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    
+    // 新增歷史紀錄
+    addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, payload.note);
+    
+    // 清空表單
+    ['in_name', 'in_qty', 'in_wh', 'in_loc', 'in_sn', 'in_note', 'in_threshold']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("入庫成功！");
+  } catch (e) {
+    alert("入庫失敗：" + e.message);
+  }
+};
+
+// 出庫
+document.getElementById('outBtn').onclick = async () => {
+  const payload = {
+    action: "delete",
+    name: document.getElementById('out_name').value.trim(),
+    qty: document.getElementById('out_qty').value.trim(),
+    warehouse: document.getElementById('out_wh').value.trim(),
+    location: document.getElementById('out_loc').value.trim(),
+    sn: document.getElementById('out_sn').value.trim()
+  };
+  
+  if (!payload.name || !payload.qty) {
+    alert("物料名稱與數量為必填項目");
+    return;
+  }
+  
+  try {
+    await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    
+    // 新增歷史紀錄
+    addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.location, payload.sn, '');
+    
+    // 清空表單
+    ['out_name', 'out_qty', 'out_wh', 'out_loc', 'out_sn']
+      .forEach(id => document.getElementById(id).value = '');
+    await loadData();
+    alert("出庫成功！");
+  } catch (e) {
+    alert("出庫失敗：" + e.message);
+  }
+};
+
+// 事件綁定
+document.getElementById('search').oninput = renderSearchResults;
+document.getElementById('warehouseFilter').onchange = renderSearchResults;
+document.getElementById('locationFilter').onchange = renderSearchResults;
+document.getElementById('refreshBtn').onclick = () => {
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  loadData();
+};
+
+// 匯出按鈕事件綁定
+document.getElementById('exportSearchBtn').onclick = exportSearchResults;
+document.getElementById('exportLowStockBtn').onclick = exportLowStock;
+document.getElementById('exportHistoryBtn').onclick = exportHistory;
+
+// 歷史紀錄篩選事件
+document.getElementById('historySearch').oninput = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyAction').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyDateStart').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyDateEnd').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyWarehouse').onchange = () => {
+  currentHistoryPage = 1;
+  renderHistory();
+};
+document.getElementById('historyRefreshBtn').onclick = () => {
+  // 搜尋按鈕：只執行搜尋，不清除篩選條件
+  currentHistoryPage = 1;
+  renderHistory();
+};
+
+// 清除所有篩選條件按鈕
+document.getElementById('historyClearBtn').onclick = () => {
+  document.getElementById('historySearch').value = '';
+  document.getElementById('historyAction').value = '';
+  document.getElementById('historyDateStart').value = '';
+  document.getElementById('historyDateEnd').value = '';
+  document.getElementById('historyWarehouse').value = '';
+  currentHistoryPage = 1;
+  renderHistory();
+  
+  // 同時清除搜尋結果
+  document.getElementById('search').value = '';
+  document.getElementById('warehouseFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  renderSearchResults();
+};
+
+document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick = stopScanner;
+
+// 分頁控制
+document.getElementById('prevPageBtn').onclick = () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderLowStock();
+  }
+};
+
+document.getElementById('nextPageBtn').onclick = () => {
+  const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderLowStock();
+  }
+};
+
+// 歷史紀錄分頁控制
+document.getElementById('historyPrevBtn').onclick = () => {
+  if (currentHistoryPage > 1) {
+    currentHistoryPage--;
+    renderHistory();
+  }
+};
+
+document.getElementById('historyNextBtn').onclick = () => {
+  const search = document.getElementById('historySearch').value.trim().toLowerCase();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const warehouse = document.getElementById('historyWarehouse').value;
+  
+  // 計算篩選後的資料數量
+  let filteredData = historyData.filter(record => {
+    const matchSearch = !search || record.material.toLowerCase().includes(search);
+    const matchAction = !action || record.action === action;
+    const matchWarehouse = !warehouse || record.warehouse === warehouse;
+    
+    let matchDate = true;
+    if(dateStart || dateEnd){
+      const recordDate = new Date(record.timestamp).toDateString();
+      const startDate = dateStart ? new Date(dateStart).toDateString() : null;
+      const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
+      
+      if(startDate && endDate){
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if(startDate){
+        matchDate = recordDate >= startDate;
+      } else if(endDate){
+        matchDate = recordDate <= endDate;
+      }
+    }
+    
+    return matchSearch && matchAction && matchWarehouse && matchDate;
+  });
+  
+  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  if (currentHistoryPage < totalPages) {
+    currentHistoryPage++;
+    renderHistory();
+  }
+};
+
+// 標籤頁切換事件
+document.getElementById('history-tab').onclick = () => {
+  // 當切換到歷史紀錄頁面時，載入歷史資料
+  setTimeout(() => {
+    if(!historyData.length) {
+      loadHistoryData();
+    }
+  }, 100);
+};
+
+// 初始化
+loadData();
+
+// 防止頁面刷新時攝影機未正確關閉
+window.addEventListener('beforeunload', stopScanner);
+</script>
 </body>
 </html>
