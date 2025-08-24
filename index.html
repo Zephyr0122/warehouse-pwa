@@ -74,7 +74,6 @@
     float: right;
   }
   
-  /* 輸入框容器樣式調整 */
   .input-container {
     position: relative;
   }
@@ -87,7 +86,6 @@
     border-radius: 0.375rem 0.375rem 0 0;
   }
   
-  /* 條碼掃描器樣式優化 */
   .barcode-scanner { 
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0,0,0,0.95); z-index: 9999; display: none;
@@ -120,10 +118,8 @@
     font-size: 1.1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   }
   
-  /* 查詢結果區域 */
   .search-results { max-height: 300px; overflow-y: auto; }
   
-  /* 分頁按鈕 */
   .pagination-controls {
     display: flex; justify-content: center; align-items: center; gap: 10px;
     margin-top: 10px;
@@ -133,7 +129,6 @@
     min-width: 120px; text-align: center;
   }
   
-  /* 歷史紀錄樣式 */
   .history-record {
     border-left: 3px solid #007bff;
     padding-left: 10px;
@@ -146,7 +141,6 @@
     border-left-color: #dc3545;
   }
   
-  /* 匯出按鈕樣式 */
   .export-btn {
     background: linear-gradient(135deg, #17a2b8, #138496);
     border: none;
@@ -159,7 +153,6 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   }
   
-  /* 標籤頁樣式 */
   .nav-tabs .nav-link {
     border-radius: 8px 8px 0 0;
     margin-right: 2px;
@@ -175,7 +168,6 @@
 <div class="container py-3">
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
 
-  <!-- 主要功能標籤頁 -->
   <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button" role="tab">
@@ -190,9 +182,7 @@
   </ul>
 
   <div class="tab-content" id="mainTabsContent">
-    <!-- 物料管理頁面 -->
     <div class="tab-pane fade show active" id="management" role="tabpanel">
-      <!-- 查詢 -->
       <div class="card p-3 mb-3">
         <h5>🔍 查詢</h5>
         <div class="row g-2 mb-3">
@@ -221,7 +211,6 @@
             </div>
         </div>
         
-        <!-- 查詢結果 -->
         <div id="searchResultsContainer" style="display: none;">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
@@ -239,7 +228,6 @@
               <tbody id="searchResultsTable"></tbody>
             </table>
           </div>
-          <!-- 查詢結果分頁控制 -->
           <div class="pagination-controls">
             <button id="searchPrevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
               <i class="fas fa-chevron-left"></i> 上一頁
@@ -252,7 +240,6 @@
         </div>
       </div>
 
-      <!-- 入庫 -->
       <div class="card p-3 mb-3">
         <h5>➕ 入庫</h5>
         <div class="input-container mb-2">
@@ -274,7 +261,6 @@
         <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
       </div>
 
-      <!-- 出庫 -->
       <div class="card p-3 mb-3">
         <h5>➖ 出庫</h5>
         <div class="input-container mb-2">
@@ -292,7 +278,6 @@
         <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
       </div>
 
-      <!-- 低庫存告警 -->
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5><i class="fas fa-exclamation-triangle text-warning"></i>低庫存告警</h5>
@@ -310,7 +295,6 @@
             <tbody id="lowStockTable"></tbody>
           </table>
         </div>
-        <!-- 低庫存分頁控制 -->
         <div class="pagination-controls">
           <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
             <i class="fas fa-chevron-left"></i> 上一頁
@@ -323,7 +307,6 @@
       </div>
     </div>
 
-    <!-- 歷史紀錄頁面 -->
     <div class="tab-pane fade" id="history" role="tabpanel">
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -333,7 +316,6 @@
           </button>
         </div>
         
-        <!-- 歷史紀錄篩選器 -->
         <div class="row mb-3">
           <div class="col-md-2">
             <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
@@ -373,13 +355,11 @@
           </div>
         </div>
         
-        <!-- 歷史紀錄列表 -->
         <div id="historyContainer">
           <div class="scroll-table" style="max-height: 400px;">
             <div id="historyList"></div>
           </div>
           
-          <!-- 歷史紀錄分頁控制 -->
           <div class="pagination-controls">
             <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
               <i class="fas fa-chevron-left"></i> 上一頁
@@ -395,7 +375,6 @@
   </div>
 </div>
 
-<!-- 條碼掃描器 -->
 <div id="barcodeScanner" class="barcode-scanner">
   <video id="video" playsinline></video>
   <div class="scanner-overlay">
@@ -440,7 +419,6 @@ const itemsPerPage = 5;
 const historyItemsPerPage = 10;
 const searchItemsPerPage = 10;
 
-// 智能建議系統
 class SmartSuggestion {
   constructor() {
     this.currentInput = null;
@@ -492,12 +470,12 @@ class SmartSuggestion {
   }
 
   findSimilarItems(keyword) {
-    if (!rawData || rawData.length <= 1) return [];
+    if (!rawData || rawData.length <= 0) return [];
 
     const normalizedKeyword = keyword.toLowerCase().trim();
     const suggestions = [];
 
-    rawData.slice(1).forEach(row => {
+    rawData.forEach(row => {
       if (!row || typeof row !== 'object' || !row[COLS.name]) return;
 
       const name = (row[COLS.name] || '').toString();
@@ -705,47 +683,52 @@ class SmartSuggestion {
   }
 }
 
-// 初始化智能建議系統
 const smartSuggestion = new SmartSuggestion();
 
-// 讀取資料
-async function loadData(){
+async function loadData() {
   try {
     const res = await fetch(API_URL);
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
-    rawData = await res.json();
-    rawData = rawData.filter(row => row && typeof row === 'object' && row[COLS.name]); // 過濾空物件
+    const data = await res.json();
+    if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
+    
+    rawData = data.filter(row => row && typeof row === 'object' && row[COLS.name]); // 過濾空物件
     console.log('載入的原始資料:', rawData);
     renderFilters();
     updateLowStockData();
     renderLowStock();
     renderSearchResults();
     smartSuggestion.init();
-  } catch(e){ 
+  } catch (e) { 
     console.error("讀取失敗:", e);
-    alert("讀取資料失敗，請檢查網路連線或API設定"); 
+    alert("讀取資料失敗，請檢查網路連線或API設定：" + e.message); 
+    rawData = [];
+    renderFilters();
+    renderLowStock();
+    renderSearchResults();
   }
 }
 
-// 載入歷史紀錄
-async function loadHistoryData(){
+async function loadHistoryData() {
   try {
     const res = await fetch(API_URL + "?action=getHistory");
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
-    historyData = await res.json();
-    historyData = historyData.filter(record => record && typeof record === 'object' && record.material);
+    const data = await res.json();
+    if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
+    
+    historyData = data.filter(record => record && typeof record === 'object' && record.material);
     console.log('載入的歷史紀錄:', historyData);
     renderHistoryFilters();
     renderHistory();
-  } catch(e){ 
+  } catch (e) { 
     console.error("讀取歷史紀錄失敗:", e);
+    alert("讀取歷史紀錄失敗：" + e.message);
     historyData = [];
     renderHistoryFilters();
     renderHistory();
   }
 }
 
-// 出庫數量驗證
 function setupOutQuantityValidation() {
   const outQtyInput = document.getElementById('out_qty');
   const outNameInput = document.getElementById('out_name');
@@ -790,9 +773,9 @@ function validateOutQuantity() {
 }
 
 function findStockItem(materialName) {
-  if (!rawData || rawData.length <= 1) return null;
+  if (!rawData || rawData.length <= 0) return null;
   
-  return rawData.slice(1).find(row => {
+  return rawData.find(row => {
     if (!row || typeof row !== 'object') return false;
     return (row[COLS.name] || '').toString().toLowerCase() === materialName.toLowerCase();
   });
@@ -818,19 +801,18 @@ function hideStockWarning() {
   }
 }
 
-// 渲染篩選器選項
-function renderFilters(){
+function renderFilters() {
   const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   
-  if(rawData && rawData.length > 1) {
-    rawData.slice(1).forEach(r => {
-      if(r && typeof r === 'object' && Object.keys(r).length > 0) {
+  if (rawData && rawData.length > 0) {
+    rawData.forEach(r => {
+      if (r && typeof r === 'object' && Object.keys(r).length > 0) {
         const wh = r[COLS.wh] ? r[COLS.wh].trim() : '';
         const spot = r[COLS.spot] ? r[COLS.spot].trim() : '';
         const loc = r[COLS.loc] ? r[COLS.loc].trim() : '';
-        if(wh) whSet.add(wh);
-        if(spot) spotSet.add(spot);
-        if(loc) locSet.add(loc);
+        if (wh) whSet.add(wh);
+        if (spot) spotSet.add(spot);
+        if (loc) locSet.add(loc);
       }
     });
   }
@@ -850,14 +832,13 @@ function renderFilters(){
   console.log('篩選器選項:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)});
 }
 
-// 渲染歷史紀錄篩選器
-function renderHistoryFilters(){
+function renderHistoryFilters() {
   const whSet = new Set();
   const spotSet = new Set();
   
   historyData.forEach(record => {
-    if(record && record.warehouse && record.warehouse.trim()) whSet.add(record.warehouse.trim());
-    if(record && record.locationSpot && record.locationSpot.trim()) spotSet.add(record.locationSpot.trim());
+    if (record && record.warehouse && record.warehouse.trim()) whSet.add(record.warehouse.trim());
+    if (record && record.locationSpot && record.locationSpot.trim()) spotSet.add(record.locationSpot.trim());
   });
   
   const historyWhSel = document.getElementById('historyWarehouse');
@@ -874,12 +855,11 @@ function renderHistoryFilters(){
   );
 }
 
-// 更新低庫存資料
-function updateLowStockData(){
+function updateLowStockData() {
   lowStockData = [];
-  if(rawData && rawData.length > 1) {
-    lowStockData = rawData.slice(1).filter(r => {
-      if(!r || typeof r !== 'object' || !r[COLS.name]) return false;
+  if (rawData && rawData.length > 0) {
+    lowStockData = rawData.filter(r => {
+      if (!r || typeof r !== 'object' || !r[COLS.name]) return false;
       const qty = parseInt(r[COLS.qty]) || 0;
       const threshold = parseInt(r[COLS.th]) || 5;
       return qty <= threshold;
@@ -889,8 +869,7 @@ function updateLowStockData(){
   console.log('低庫存資料:', lowStockData);
 }
 
-// 渲染低庫存告警（分頁）
-function renderLowStock(){
+function renderLowStock() {
   const totalPages = Math.ceil(lowStockData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -898,7 +877,7 @@ function renderLowStock(){
   
   const tbody = document.getElementById('lowStockTable');
   
-  if(pageData.length > 0) {
+  if (pageData.length > 0) {
     tbody.innerHTML = pageData.map(r => `
       <tr class="${parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock'}">
         <td>${r[COLS.name] || '-'}</td>
@@ -919,8 +898,7 @@ function renderLowStock(){
   document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
 }
 
-// 渲染搜尋結果（篩選資料）
-function renderSearchResults(){
+function renderSearchResults() {
   const kw = document.getElementById('search').value.trim().toLowerCase();
   const whF = document.getElementById('warehouseFilter').value.trim();
   const spotF = document.getElementById('locationSpotFilter').value.trim();
@@ -928,7 +906,7 @@ function renderSearchResults(){
   
   console.log('搜尋條件:', {keyword: kw, warehouse: whF, spot: spotF, location: locF});
   
-  if(!kw && !whF && !spotF && !locF){
+  if (!kw && !whF && !spotF && !locF) {
     document.getElementById('searchResultsContainer').style.display = 'none';
     searchResults = [];
     currentSearchPage = 1;
@@ -936,9 +914,9 @@ function renderSearchResults(){
   }
   
   searchResults = [];
-  if(rawData && rawData.length > 1) {
-    searchResults = rawData.slice(1).filter(r => {
-      if(!r || typeof r !== 'object' || !r[COLS.name]) return false;
+  if (rawData && rawData.length > 0) {
+    searchResults = rawData.filter(r => {
+      if (!r || typeof r !== 'object' || !r[COLS.name]) return false;
       
       const matchKw = !kw || [COLS.name, COLS.sn, COLS.wh, COLS.spot, COLS.loc, COLS.note].some(c => 
         (r[c] || '').toString().toLowerCase().includes(kw));
@@ -956,12 +934,11 @@ function renderSearchResults(){
   renderSearchResultsPage();
 }
 
-// 渲染搜尋結果分頁
-function renderSearchResultsPage(){
+function renderSearchResultsPage() {
   const container = document.getElementById('searchResultsContainer');
   const tbody = document.getElementById('searchResultsTable');
   
-  if(searchResults.length === 0){
+  if (searchResults.length === 0) {
     container.style.display = 'block';
     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
     
@@ -995,8 +972,7 @@ function renderSearchResultsPage(){
   document.getElementById('searchNextPageBtn').disabled = currentSearchPage >= totalPages;
 }
 
-// 渲染歷史紀錄
-function renderHistory(){
+function renderHistory() {
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
   const dateStart = document.getElementById('historyDateStart').value;
@@ -1015,21 +991,21 @@ function renderHistory(){
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       
       const recordDate = new Date(record.timestamp);
-      if(isNaN(recordDate.getTime())) return false;
+      if (isNaN(recordDate.getTime())) return false;
       
       const recordDateStr = recordDate.toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDateStr >= startDate && recordDateStr <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDateStr >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDateStr <= endDate;
       }
     }
@@ -1044,7 +1020,7 @@ function renderHistory(){
   
   const historyList = document.getElementById('historyList');
   
-  if(pageData.length > 0){
+  if (pageData.length > 0) {
     historyList.innerHTML = pageData.map(record => {
       if (!record || !record.timestamp) return '';
       
@@ -1052,35 +1028,26 @@ function renderHistory(){
       const dateStr = isNaN(date.getTime()) ? '日期錯誤' : date.toLocaleDateString('zh-TW');
       const timeStr = isNaN(date.getTime()) ? '時間錯誤' : date.toLocaleTimeString('zh-TW');
       
-      const action = record.action || '未知動作';
-      const material = record.material || '未知物料';
-      const quantity = record.quantity || 0;
-      const warehouse = record.warehouse || '-';
-      const locationSpot = record.locationSpot || '-';
-      const location = record.location || '-';
-      const serialNumber = record.serialNumber || '';
-      const note = record.note || '';
-      
       return `
-        <div class="history-record ${action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
+        <div class="history-record ${record.action === '入庫' ? 'in' : 'out'} card mb-2 p-2">
           <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
               <div class="d-flex align-items-center mb-1">
-                <i class="fas ${action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
-                <strong>${action}</strong>
-                <span class="badge ${action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
-                  ${quantity} 件
+                <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                <strong>${record.action || '未知動作'}</strong>
+                <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                  ${record.quantity || 0} 件
                 </span>
               </div>
               <div class="text-muted small">
-                <div><strong>${material}</strong></div>
+                <div><strong>${record.material || '未知物料'}</strong></div>
                 <div>
-                  <i class="fas fa-warehouse me-1"></i>${warehouse} 
-                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${locationSpot}
-                  <i class="fas fa-cube ms-2 me-1"></i>${location}
+                  <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'} 
+                  <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.locationSpot || '-'}
+                  <i class="fas fa-cube ms-2 me-1"></i>${record.location || '-'}
                 </div>
-                ${serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${serialNumber}</div>` : ''}
-                ${note ? `<div><i class="fas fa-sticky-note me-1"></i>${note}</div>` : ''}
+                ${record.serialNumber ? `<div><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
+                ${record.note ? `<div><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
               </div>
             </div>
             <div class="text-end text-muted small">
@@ -1106,7 +1073,6 @@ function renderHistory(){
   document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
 }
 
-// CSV 匯出功能
 function exportToCSV(data, filename, headers) {
   const csvContent = [
     headers.join(','),
@@ -1129,9 +1095,8 @@ function exportToCSV(data, filename, headers) {
   document.body.removeChild(link);
 }
 
-// 匯出搜尋結果
 function exportSearchResults() {
-  if(searchResults.length === 0) {
+  if (searchResults.length === 0) {
     alert('沒有資料可匯出');
     return;
   }
@@ -1153,9 +1118,8 @@ function exportSearchResults() {
   exportToCSV(exportData, `物料查詢結果_${timestamp}.csv`, headers);
 }
 
-// 匯出低庫存清單
 function exportLowStock() {
-  if(lowStockData.length === 0) {
+  if (lowStockData.length === 0) {
     alert('沒有低庫存資料可匯出');
     return;
   }
@@ -1177,7 +1141,6 @@ function exportLowStock() {
   exportToCSV(exportData, `低庫存告警清單_${timestamp}.csv`, headers);
 }
 
-// 匯出歷史紀錄
 function exportHistory() {
   const search = document.getElementById('historySearch').value.trim().toLowerCase();
   const action = document.getElementById('historyAction').value;
@@ -1193,17 +1156,17 @@ function exportHistory() {
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       const recordDate = new Date(record.timestamp).toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDate >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDate <= endDate;
       }
     }
@@ -1211,7 +1174,7 @@ function exportHistory() {
     return matchSearch && matchAction && matchWarehouse && matchLocationSpot && matchDate;
   });
   
-  if(filteredData.length === 0) {
+  if (filteredData.length === 0) {
     alert('沒有符合條件的歷史紀錄可匯出');
     return;
   }
@@ -1233,8 +1196,7 @@ function exportHistory() {
   exportToCSV(exportData, `出入庫歷史紀錄_${timestamp}.csv`, headers);
 }
 
-// 條碼掃描功能
-function startScanner(targetId){
+function startScanner(targetId) {
   currentScanTarget = targetId;
   const scanner = document.getElementById('barcodeScanner');
   scanner.style.display = 'flex';
@@ -1304,7 +1266,7 @@ function startScanner(targetId){
       setTimeout(() => {
         stopScanner();
         const nextInput = document.getElementById(currentScanTarget).closest('.input-group').nextElementSibling;
-        if(nextInput && nextInput.querySelector('input')){
+        if (nextInput && nextInput.querySelector('input')) {
           nextInput.querySelector('input').focus();
         }
       }, 1000);
@@ -1317,10 +1279,10 @@ function startScanner(targetId){
   });
 }
 
-function stopScanner(){
+function stopScanner() {
   Quagga.stop();
   const video = document.getElementById('video');
-  if(video.srcObject){
+  if (video.srcObject) {
     video.srcObject.getTracks().forEach(track => track.stop());
     video.srcObject = null;
   }
@@ -1328,11 +1290,10 @@ function stopScanner(){
   currentScanTarget = null;
 }
 
-// 根據序號尋找物品
 function findItemBySerialNumber(serialNumber) {
-  if (!rawData || rawData.length <= 1) return null;
+  if (!rawData || rawData.length <= 0) return null;
   
-  const foundRow = rawData.slice(1).find(row => {
+  const foundRow = rawData.find(row => {
     if (!row || typeof row !== 'object') return false;
     return (row[COLS.sn] || '').toString().toLowerCase() === serialNumber.toLowerCase();
   });
@@ -1353,7 +1314,6 @@ function findItemBySerialNumber(serialNumber) {
   return null;
 }
 
-// 記錄出入庫歷史
 function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, sn, note) {
   const record = {
     timestamp: new Date().toISOString(),
@@ -1371,16 +1331,15 @@ function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, 
   
   historyData.unshift(record);
   
-  if(historyData.length > 1000) {
+  if (historyData.length > 1000) {
     historyData = historyData.slice(0, 1000);
   }
   
-  if(document.getElementById('history-tab').classList.contains('active')) {
+  if (document.getElementById('history-tab').classList.contains('active')) {
     renderHistory();
   }
 }
 
-// 入庫
 document.getElementById('inBtn').onclick = async () => {
   const payload = {
     action: "add",
@@ -1401,7 +1360,12 @@ document.getElementById('inBtn').onclick = async () => {
   
   try {
     const query = new URLSearchParams(payload).toString();
-    await fetch(`${API_URL}?${query}`);
+    const res = await fetch(`${API_URL}?${query}`);
+    const result = await res.json();
+    
+    if (result.status === "error") {
+      throw new Error(result.message || "入庫失敗");
+    }
     
     addHistoryRecord('入庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, payload.note);
     
@@ -1413,11 +1377,11 @@ document.getElementById('inBtn').onclick = async () => {
     await loadData();
     alert("入庫成功！");
   } catch (e) {
+    console.error("入庫失敗:", e);
     alert("入庫失敗：" + e.message);
   }
 };
 
-// 出庫
 document.getElementById('outBtn').onclick = async () => {
   const payload = {
     action: "delete",
@@ -1449,7 +1413,12 @@ document.getElementById('outBtn').onclick = async () => {
   
   try {
     const query = new URLSearchParams(payload).toString();
-    await fetch(`${API_URL}?${query}`);
+    const res = await fetch(`${API_URL}?${query}`);
+    const result = await res.json();
+    
+    if (result.status === "error") {
+      throw new Error(result.message || "出庫失敗");
+    }
     
     addHistoryRecord('出庫', payload.name, payload.qty, payload.warehouse, payload.locationSpot, payload.location, payload.sn, '');
     
@@ -1471,11 +1440,11 @@ document.getElementById('outBtn').onclick = async () => {
     await loadData();
     alert("出庫成功！");
   } catch (e) {
+    console.error("出庫失敗:", e);
     alert("出庫失敗：" + e.message);
   }
 };
 
-// 事件綁定
 document.getElementById('search').oninput = renderSearchResults;
 document.getElementById('warehouseFilter').onchange = renderSearchResults;
 document.getElementById('locationSpotFilter').onchange = renderSearchResults;
@@ -1490,12 +1459,10 @@ document.getElementById('refreshBtn').onclick = () => {
   loadData();
 };
 
-// 匯出按鈕事件綁定
 document.getElementById('exportSearchBtn').onclick = exportSearchResults;
 document.getElementById('exportLowStockBtn').onclick = exportLowStock;
 document.getElementById('exportHistoryBtn').onclick = exportHistory;
 
-// 歷史紀錄篩選事件
 document.getElementById('historySearch').oninput = () => {
   currentHistoryPage = 1;
   renderHistory();
@@ -1546,7 +1513,6 @@ document.getElementById('scanInSnBtn').onclick = () => startScanner('in_sn');
 document.getElementById('scanOutSnBtn').onclick = () => startScanner('out_sn');
 document.getElementById('closeScannerBtn').onclick = stopScanner;
 
-// 低庫存分頁控制
 document.getElementById('prevPageBtn').onclick = () => {
   if (currentPage > 1) {
     currentPage--;
@@ -1562,7 +1528,6 @@ document.getElementById('nextPageBtn').onclick = () => {
   }
 };
 
-// 查詢結果分頁控制
 document.getElementById('searchPrevPageBtn').onclick = () => {
   if (currentSearchPage > 1) {
     currentSearchPage--;
@@ -1578,7 +1543,6 @@ document.getElementById('searchNextPageBtn').onclick = () => {
   }
 };
 
-// 歷史紀錄分頁控制
 document.getElementById('historyPrevBtn').onclick = () => {
   if (currentHistoryPage > 1) {
     currentHistoryPage--;
@@ -1601,17 +1565,17 @@ document.getElementById('historyNextBtn').onclick = () => {
     const matchLocationSpot = !locationSpot || record.locationSpot === locationSpot;
     
     let matchDate = true;
-    if(dateStart || dateEnd){
-      if(!record.timestamp) return false;
+    if (dateStart || dateEnd) {
+      if (!record.timestamp) return false;
       const recordDate = new Date(record.timestamp).toDateString();
       const startDate = dateStart ? new Date(dateStart).toDateString() : null;
       const endDate = dateEnd ? new Date(dateEnd).toDateString() : null;
       
-      if(startDate && endDate){
+      if (startDate && endDate) {
         matchDate = recordDate >= startDate && recordDate <= endDate;
-      } else if(startDate){
+      } else if (startDate) {
         matchDate = recordDate >= startDate;
-      } else if(endDate){
+      } else if (endDate) {
         matchDate = recordDate <= endDate;
       }
     }
@@ -1626,20 +1590,17 @@ document.getElementById('historyNextBtn').onclick = () => {
   }
 };
 
-// 標籤頁切換事件
 document.getElementById('history-tab').onclick = () => {
   setTimeout(() => {
-    if(!historyData.length) {
+    if (!historyData.length) {
       loadHistoryData();
     }
   }, 100);
 };
 
-// 初始化
 loadData();
 setupOutQuantityValidation();
 
-// 防止頁面刷新時攝影機未正確關閉
 window.addEventListener('beforeunload', stopScanner);
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1648,4 +1609,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
