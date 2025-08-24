@@ -1706,13 +1706,14 @@ setupOutQuantityValidation();
 // 防止頁面刷新時攝影機未正確關閉
 window.addEventListener('beforeunload', stopScanner);
 
-// 當頁面載入完成後，初始化智能建議系統
+/* 當頁面載入完成後，初始化智能建議系統*/
 document.addEventListener('DOMContentLoaded', () => {
   smartSuggestion.init();
 });
 </script>
 </body>
 </html>
+
 
 
 
