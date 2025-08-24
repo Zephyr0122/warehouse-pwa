@@ -3,18 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>倉庫物料管理（PWA）- API修復版</title>
+<title>倉庫管理 - CORS修復版</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-  body { -webkit-tap-highlight-color: transparent; }
-  .big-btn { padding: .65rem; font-size: 1rem; }
-  .small-input { padding: .45rem .6rem; font-size: .95rem; }
-  .low-stock { background-color: #fff3cd !important; }
-  .out-of-stock { background-color: #f8d7da !important; }
-  .scroll-table { max-height: 250px; overflow-y: auto; }
-  
-  /* 除錯資訊面板 */
   .debug-panel {
     position: fixed;
     top: 10px;
@@ -24,244 +16,216 @@
     padding: 15px;
     border-radius: 8px;
     font-size: 12px;
-    max-width: 350px;
-    max-height: 300px;
+    max-width: 400px;
+    max-height: 400px;
     overflow-y: auto;
     z-index: 1000;
-    font-family: 'Courier New', monospace;
-    border: 1px solid #444;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-family: monospace;
   }
   
-  .debug-panel.hidden {
-    display: none;
-  }
-
-  .debug-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #444;
-  }
+  .debug-panel.hidden { display: none; }
   
-  .debug-item {
-    margin: 5px 0;
-    padding: 3px 0;
-  }
-  
-  .debug-label {
-    color: #90CAF9;
-    font-weight: bold;
-  }
-  
-  .debug-value {
-    color: #A5D6A7;
-    margin-left: 8px;
-  }
-  
-  .debug-error {
-    color: #FFCDD2;
-    background: rgba(255, 0, 0, 0.1);
-    padding: 5px;
-    border-radius: 3px;
-    margin: 5px 0;
-  }
-  
-  .debug-success {
-    color: #C8E6C9;
-    background: rgba(0, 255, 0, 0.1);
-    padding: 5px;
-    border-radius: 3px;
-    margin: 5px 0;
-  }
-  
-  .api-test-section {
-    background: rgba(255,255,255,0.05);
-    padding: 10px;
-    border-radius: 5px;
-    margin: 10px 0;
-  }
-  
-  .connection-status {
-    padding: 8px;
-    border-radius: 5px;
+  .status-indicator {
+    padding: 15px;
+    border-radius: 8px;
     text-align: center;
     font-weight: bold;
-    margin: 10px 0;
+    margin: 15px 0;
   }
   
   .status-connecting {
     background: #FFF3E0;
     color: #F57C00;
-    border: 1px solid #FFB74D;
+    border: 2px solid #FFB74D;
   }
   
   .status-success {
     background: #E8F5E8;
     color: #2E7D32;
-    border: 1px solid #81C784;
+    border: 2px solid #81C784;
   }
   
   .status-error {
     background: #FFEBEE;
     color: #C62828;
-    border: 1px solid #E57373;
+    border: 2px solid #E57373;
   }
   
-  /* API測試工具樣式 */
-  .api-tester {
-    background: #f8f9fa;
-    padding: 15px;
+  .cors-fix-section {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border: 2px solid #2196F3;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+  
+  .method-card {
+    background: white;
+    border: 1px solid #ddd;
     border-radius: 8px;
-    margin: 15px 0;
-    border: 1px solid #dee2e6;
+    padding: 15px;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .method-active {
+    border-color: #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
   }
   
   .test-result {
     background: white;
-    border: 1px solid #dee2e6;
+    border: 1px solid #ddd;
     border-radius: 5px;
-    padding: 10px;
+    padding: 15px;
     margin: 10px 0;
     font-family: monospace;
-    font-size: 12px;
-    max-height: 200px;
+    font-size: 13px;
+    max-height: 300px;
     overflow-y: auto;
   }
   
-  .test-success {
-    border-color: #28a745;
-    background: #f8fff8;
-  }
-  
-  .test-error {
-    border-color: #dc3545;
-    background: #fff8f8;
-  }
+  .test-success { border-color: #28a745; background: #f8fff8; }
+  .test-error { border-color: #dc3545; background: #fff8f8; }
+  .test-info { border-color: #17a2b8; background: #f8fdff; }
 </style>
 </head>
 <body class="bg-light">
 
-<!-- 加強版除錯面板 -->
+<!-- CORS 除錯面板 -->
 <div id="debugPanel" class="debug-panel">
-  <div class="debug-header">
-    <strong><i class="fas fa-bug"></i> API 除錯控制台</strong>
-    <button onclick="toggleDebugPanel()" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:2px 6px;">×</button>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <strong><i class="fas fa-network-wired"></i> CORS 診斷</strong>
+    <button onclick="toggleDebug()" style="background:none; border:none; color:white; cursor:pointer;">×</button>
   </div>
   
-  <div class="debug-item">
-    <span class="debug-label">連線狀態:</span>
-    <span id="debugConnectionStatus" class="debug-value">未測試</span>
+  <div id="corsDebugInfo">
+    <div><strong>請求方法:</strong> <span id="currentMethod">未測試</span></div>
+    <div><strong>CORS狀態:</strong> <span id="corsStatus">檢查中</span></div>
+    <div><strong>預檢觸發:</strong> <span id="preflightStatus">未知</span></div>
+    <div><strong>最後錯誤:</strong> <div id="lastError" style="max-height: 80px; overflow-y: auto; margin-top: 5px;">無</div></div>
   </div>
   
-  <div class="debug-item">
-    <span class="debug-label">API URL:</span>
-    <div class="debug-value" style="word-break: break-all; font-size: 10px;" id="debugApiUrl">-</div>
-  </div>
-  
-  <div class="debug-item">
-    <span class="debug-label">最後請求:</span>
-    <span id="debugLastRequest" class="debug-value">無</span>
-  </div>
-  
-  <div class="debug-item">
-    <span class="debug-label">回應狀態:</span>
-    <span id="debugResponseStatus" class="debug-value">-</span>
-  </div>
-  
-  <div class="debug-item">
-    <span class="debug-label">資料筆數:</span>
-    <span id="debugDataCount" class="debug-value">0</span>
-  </div>
-  
-  <div class="debug-item">
-    <span class="debug-label">錯誤訊息:</span>
-    <div id="debugErrorDetails" class="debug-value" style="max-height: 60px; overflow-y: auto;">無</div>
-  </div>
-  
-  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #444;">
-    <button onclick="testConnection()" class="btn btn-sm btn-primary" style="font-size: 10px; padding: 2px 8px;">
-      <i class="fas fa-wifi"></i> 測試連線
+  <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #444;">
+    <button onclick="runAllTests()" class="btn btn-sm btn-primary" style="font-size: 11px;">
+      全面診斷
     </button>
-    <button onclick="showRawResponse()" class="btn btn-sm btn-info" style="font-size: 10px; padding: 2px 8px; margin-left: 5px;">
-      <i class="fas fa-eye"></i> 檢視原始回應
+    <button onclick="clearDebug()" class="btn btn-sm btn-secondary" style="font-size: 11px; margin-left: 5px;">
+      清除
     </button>
   </div>
-  
-  <div id="rawResponseDisplay" style="display: none; margin-top: 10px; max-height: 100px; overflow: auto; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 3px; font-size: 10px;"></div>
 </div>
 
 <div class="container py-3">
-  <h3 class="text-center mb-3">📦 倉庫物料管理 - API修復版</h3>
+  <h3 class="text-center mb-3">🔧 CORS 預檢問題修復工具</h3>
 
-  <!-- 連線狀態指示器 -->
-  <div id="statusIndicator" class="connection-status status-connecting">
-    <i class="fas fa-sync fa-spin"></i> 正在初始化系統...
+  <div id="statusIndicator" class="status-indicator status-connecting">
+    <i class="fas fa-cog fa-spin"></i> 正在分析 CORS 問題...
   </div>
 
-  <!-- API測試工具區域 -->
-  <div class="api-tester">
-    <h5><i class="fas fa-tools text-primary"></i> API 連線診斷工具</h5>
-    
-    <div class="mb-3">
-      <label class="form-label">API URL 測試:</label>
-      <div class="input-group">
-        <input id="testApiUrl" class="form-control" value="">
-        <button id="testConnectionBtn" class="btn btn-outline-primary">
-          <i class="fas fa-plug"></i> 測試連線
+  <!-- CORS 修復方案 -->
+  <div class="cors-fix-section">
+    <h4><i class="fas fa-tools text-primary"></i> CORS 預檢修復方案</h4>
+    <p class="mb-4">Google Apps Script 的 CORS 預檢問題有多種解決方案，讓我們逐一測試：</p>
+
+    <!-- 方案 1: 簡化請求 -->
+    <div class="method-card" id="method1">
+      <h5><i class="fas fa-1"></i> 方案一：簡化請求（避開預檢）</h5>
+      <p><strong>原理：</strong> 使用簡單請求，避免觸發 CORS 預檢</p>
+      <ul>
+        <li>移除自訂 Headers</li>
+        <li>使用 GET 請求搭配 URL 參數</li>
+        <li>Content-Type 設為 text/plain</li>
+      </ul>
+      <div class="input-group mb-2">
+        <input id="apiUrl1" class="form-control" placeholder="貼上你的 Google Apps Script URL">
+        <button onclick="testMethod1()" class="btn btn-success">
+          <i class="fas fa-play"></i> 測試方案一
         </button>
       </div>
+      <div id="result1" class="test-result" style="display:none;"></div>
     </div>
-    
-    <div class="mb-3">
-      <label class="form-label">快速測試:</label>
-      <div class="btn-group w-100" role="group">
-        <button class="btn btn-outline-secondary btn-sm" onclick="testCORS()">
-          <i class="fas fa-globe"></i> CORS 測試
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="testSSL()">
-          <i class="fas fa-lock"></i> SSL 檢查
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="testResponseFormat()">
-          <i class="fas fa-code"></i> 格式檢查
+
+    <!-- 方案 2: JSONP -->
+    <div class="method-card" id="method2">
+      <h5><i class="fas fa-2"></i> 方案二：JSONP 繞過</h5>
+      <p><strong>原理：</strong> 使用 JSONP 完全繞過 CORS 限制</p>
+      <ul>
+        <li>不會觸發 CORS 預檢</li>
+        <li>適合純讀取操作</li>
+        <li>需要 Google Apps Script 支援 callback</li>
+      </ul>
+      <div class="input-group mb-2">
+        <input id="apiUrl2" class="form-control" placeholder="貼上你的 Google Apps Script URL">
+        <button onclick="testMethod2()" class="btn btn-success">
+          <i class="fas fa-play"></i> 測試方案二
         </button>
       </div>
+      <div id="result2" class="test-result" style="display:none;"></div>
     </div>
-    
-    <div id="testResults" class="test-result" style="display: none;"></div>
+
+    <!-- 方案 3: 代理請求 -->
+    <div class="method-card" id="method3">
+      <h5><i class="fas fa-3"></i> 方案三：修改 Google Apps Script</h5>
+      <p><strong>原理：</strong> 修改後端腳本正確處理 CORS</p>
+      <div class="alert alert-info">
+        <strong>需要在 Google Apps Script 中添加：</strong>
+        <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0;"><code>function doOptions() {
+  return ContentService
+    .createTextOutput()
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+}</code></pre>
+      </div>
+      <div class="input-group mb-2">
+        <input id="apiUrl3" class="form-control" placeholder="貼上修改後的 Google Apps Script URL">
+        <button onclick="testMethod3()" class="btn btn-success">
+          <i class="fas fa-play"></i> 測試方案三
+        </button>
+      </div>
+      <div id="result3" class="test-result" style="display:none;"></div>
+    </div>
+
+    <!-- 方案 4: 圖片標籤載入 -->
+    <div class="method-card" id="method4">
+      <h5><i class="fas fa-4"></i> 方案四：圖片標籤觸發</h5>
+      <p><strong>原理：</strong> 使用 img 標籤觸發請求（適合簡單數據提交）</p>
+      <div class="input-group mb-2">
+        <input id="apiUrl4" class="form-control" placeholder="貼上你的 Google Apps Script URL">
+        <button onclick="testMethod4()" class="btn btn-success">
+          <i class="fas fa-play"></i> 測試方案四
+        </button>
+      </div>
+      <div id="result4" class="test-result" style="display:none;"></div>
+    </div>
   </div>
 
-  <!-- 簡化的物料管理介面 -->
-  <div class="card p-3 mb-3">
-    <h5>🔍 庫存查詢測試</h5>
-    <div class="row g-2">
-      <div class="col-md-6">
-        <input id="search" class="form-control" placeholder="搜尋物料名稱">
+  <!-- 修復後的功能測試 -->
+  <div class="card p-4">
+    <h5><i class="fas fa-check-circle text-success"></i> 修復後功能測試</h5>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <input id="testQuery" class="form-control" placeholder="輸入測試搜尋關鍵字">
       </div>
-      <div class="col-md-3">
-        <button id="searchBtn" class="btn btn-primary w-100">
-          <i class="fas fa-search"></i> 搜尋
-        </button>
-      </div>
-      <div class="col-md-3">
-        <button id="refreshBtn" class="btn btn-outline-secondary w-100">
-          <i class="fas fa-sync-alt"></i> 重新載入
+      <div class="col-md-4">
+        <button onclick="testSearch()" class="btn btn-primary w-100">
+          <i class="fas fa-search"></i> 測試搜尋
         </button>
       </div>
     </div>
     
-    <div id="searchResults" class="mt-3" style="display: none;">
-      <h6>搜尋結果:</h6>
+    <div id="searchResult" style="display:none; margin-top: 20px;">
+      <h6>搜尋結果：</h6>
       <div class="table-responsive">
         <table class="table table-sm table-striped">
           <thead class="table-primary">
-            <tr>
-              <th>物料名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>更新時間</th>
-            </tr>
+            <tr><th>物料</th><th>數量</th><th>倉庫</th><th>狀態</th></tr>
           </thead>
-          <tbody id="resultsTable"></tbody>
+          <tbody id="searchTable"></tbody>
         </table>
       </div>
     </div>
@@ -270,409 +234,402 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// 配置
-const API_URL = "https://script.google.com/macros/s/AKfycbzNbybTy_0vFGLR0hSeFW7FlXGbv44ho1P_xPMv6aE6WBRZuVOpTYXlGvElkdE4Veo/exec";
+let workingUrl = null;
+let workingMethod = null;
+let testData = [];
 
-let rawData = [];
-let lastResponse = null;
-let connectionStatus = 'unknown';
-
-// 除錯工具函數
-function updateDebugInfo(status, details = {}) {
-  document.getElementById('debugConnectionStatus').textContent = status;
-  document.getElementById('debugApiUrl').textContent = API_URL;
-  document.getElementById('debugLastRequest').textContent = new Date().toLocaleTimeString('zh-TW');
-  
-  if (details.responseStatus) {
-    document.getElementById('debugResponseStatus').textContent = details.responseStatus;
-  }
-  
-  if (details.dataCount !== undefined) {
-    document.getElementById('debugDataCount').textContent = details.dataCount;
-  }
-  
-  if (details.error) {
-    const errorDiv = document.getElementById('debugErrorDetails');
-    errorDiv.innerHTML = `<div class="debug-error">${details.error}</div>`;
-  } else if (status === '連線成功') {
-    const errorDiv = document.getElementById('debugErrorDetails');
-    errorDiv.innerHTML = `<div class="debug-success">無錯誤</div>`;
-  }
+// 除錯工具
+function toggleDebug() {
+  document.getElementById('debugPanel').classList.toggle('hidden');
 }
 
-function toggleDebugPanel() {
-  const panel = document.getElementById('debugPanel');
-  panel.classList.toggle('hidden');
+function updateDebug(method, corsStatus, preflightStatus, error = null) {
+  document.getElementById('currentMethod').textContent = method;
+  document.getElementById('corsStatus').textContent = corsStatus;
+  document.getElementById('preflightStatus').textContent = preflightStatus;
+  document.getElementById('lastError').textContent = error || '無錯誤';
 }
 
-function showRawResponse() {
-  const display = document.getElementById('rawResponseDisplay');
-  if (lastResponse) {
-    display.style.display = display.style.display === 'none' ? 'block' : 'none';
-    if (display.style.display === 'block') {
-      display.textContent = JSON.stringify(lastResponse, null, 2).substring(0, 500) + '...';
-    }
-  } else {
-    display.style.display = 'block';
-    display.textContent = '暫無回應資料';
-  }
+function clearDebug() {
+  document.getElementById('lastError').textContent = '已清除';
 }
 
-function showStatus(message, type = 'connecting') {
-  const statusDiv = document.getElementById('statusIndicator');
-  statusDiv.className = `connection-status status-${type}`;
-  statusDiv.innerHTML = message;
+function showStatus(message, type) {
+  const status = document.getElementById('statusIndicator');
+  status.className = `status-indicator status-${type}`;
+  status.innerHTML = message;
+}
+
+function showResult(methodId, message, type) {
+  const result = document.getElementById(`result${methodId}`);
+  result.style.display = 'block';
+  result.className = `test-result test-${type}`;
+  result.innerHTML = message;
   
+  // 高亮成功的方案
+  const method = document.getElementById(`method${methodId}`);
   if (type === 'success') {
-    setTimeout(() => {
-      statusDiv.style.display = 'none';
-    }, 3000);
+    method.classList.add('method-active');
+    workingMethod = methodId;
+    workingUrl = document.getElementById(`apiUrl${methodId}`).value;
+  } else {
+    method.classList.remove('method-active');
   }
 }
 
-// 進階 API 測試函數
-async function testConnection() {
-  updateDebugInfo('測試中...');
-  showStatus('<i class="fas fa-sync fa-spin"></i> 正在測試 API 連線...', 'connecting');
+// 方案一：簡化請求
+async function testMethod1() {
+  const url = document.getElementById('apiUrl1').value.trim();
+  if (!url) {
+    alert('請輸入 Google Apps Script URL');
+    return;
+  }
+  
+  showResult(1, '正在測試簡化請求方案...', 'info');
+  updateDebug('簡化請求', '測試中', '避開預檢');
   
   try {
-    console.log('=== API 連線測試開始 ===');
-    console.log('URL:', API_URL);
-    
-    // 第一步：基本連通性測試
-    console.log('步驟1: 基本 fetch 測試');
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
-    
-    const startTime = Date.now();
-    const response = await fetch(API_URL, {
+    // 使用最簡單的 GET 請求，不添加任何可能觸發預檢的 headers
+    const response = await fetch(url + '?t=' + Date.now(), {
       method: 'GET',
-      signal: controller.signal,
-      mode: 'cors',
-      credentials: 'omit',
-      headers: {
-        'Accept': 'application/json,text/plain,*/*',
-        'Cache-Control': 'no-cache',
-        'User-Agent': 'WarehouseApp/1.0'
-      }
+      mode: 'cors', // 明確指定 CORS 模式
+      cache: 'no-cache'
     });
     
-    clearTimeout(timeoutId);
-    const responseTime = Date.now() - startTime;
+    const responseText = await response.text();
     
-    console.log('步驟2: 回應分析');
-    console.log('狀態碼:', response.status);
-    console.log('狀態文字:', response.statusText);
-    console.log('回應時間:', responseTime + 'ms');
-    console.log('Headers:', [...response.headers.entries()]);
-    
-    updateDebugInfo('回應已收到', {
-      responseStatus: `${response.status} ${response.statusText} (${responseTime}ms)`
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP錯誤 ${response.status}: ${response.statusText}`);
-    }
-    
-    // 第三步：內容類型檢查
-    const contentType = response.headers.get('content-type') || '';
-    console.log('Content-Type:', contentType);
-    
-    // 第四步：讀取回應內容
-    console.log('步驟3: 讀取回應內容');
-    let responseText;
-    try {
-      responseText = await response.text();
-      console.log('原始回應長度:', responseText.length);
-      console.log('原始回應前500字:', responseText.substring(0, 500));
-    } catch (readError) {
-      throw new Error(`讀取回應失敗: ${readError.message}`);
-    }
-    
-    // 第五步：JSON 解析
-    console.log('步驟4: JSON 解析');
-    let jsonData;
-    try {
-      // 移除可能的 BOM 和空白字符
-      const cleanedText = responseText.replace(/^\uFEFF/, '').trim();
-      
-      // 檢查是否被包在 HTML 中（常見的錯誤狀況）
-      if (cleanedText.startsWith('<') && cleanedText.includes('html')) {
-        throw new Error('回應是HTML格式而不是JSON - 可能是Google Apps Script的錯誤頁面');
+    if (response.ok) {
+      let data;
+      try {
+        // 嘗試解析 JSON
+        data = JSON.parse(responseText);
+        showResult(1, `✅ 方案一成功！\n狀態: ${response.status}\n資料類型: ${Array.isArray(data) ? 'Array' : typeof data}\n資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}\n\n前100字元預覽:\n${responseText.substring(0, 100)}...`, 'success');
+        updateDebug('簡化請求', '成功', '未觸發');
+        testData = data;
+        showStatus('✅ 方案一：簡化請求成功！', 'success');
+      } catch (parseError) {
+        showResult(1, `⚠️ 請求成功但JSON解析失敗\n狀態: ${response.status}\n原始回應:\n${responseText.substring(0, 200)}...`, 'error');
+        updateDebug('簡化請求', '回應格式錯誤', '未觸發', parseError.message);
       }
-      
-      jsonData = JSON.parse(cleanedText);
-      lastResponse = jsonData;
-      console.log('JSON解析成功');
-      console.log('資料類型:', Array.isArray(jsonData) ? 'Array' : typeof jsonData);
-      
-      if (Array.isArray(jsonData)) {
-        console.log('陣列長度:', jsonData.length);
-        if (jsonData.length > 0) {
-          console.log('第一筆資料樣本:', jsonData[0]);
-        }
-      }
-      
-    } catch (parseError) {
-      console.log('JSON解析失敗:', parseError.message);
-      console.log('嘗試解析的內容:', responseText.substring(0, 200));
-      throw new Error(`JSON解析失敗: ${parseError.message}`);
+    } else {
+      showResult(1, `❌ 請求失敗\n狀態: ${response.status} ${response.statusText}\n回應內容:\n${responseText.substring(0, 200)}`, 'error');
+      updateDebug('簡化請求', '請求失敗', '未觸發', `HTTP ${response.status}`);
     }
-    
-    // 第六步：資料驗證
-    console.log('步驟5: 資料驗證');
-    if (!Array.isArray(jsonData)) {
-      throw new Error(`期望陣列格式，但收到: ${typeof jsonData}`);
-    }
-    
-    // 成功
-    connectionStatus = 'success';
-    rawData = jsonData;
-    
-    updateDebugInfo('連線成功', {
-      responseStatus: `${response.status} OK (${responseTime}ms)`,
-      dataCount: jsonData.length,
-      error: null
-    });
-    
-    showStatus(`✅ API 連線成功！收到 ${jsonData.length} 筆資料`, 'success');
-    
-    // 更新搜尋結果
-    displaySearchResults(jsonData);
-    
-    console.log('=== API 連線測試完成 ===');
-    return jsonData;
     
   } catch (error) {
-    console.error('=== API 連線測試失敗 ===');
-    console.error('錯誤詳情:', error);
+    let errorMsg = error.message;
+    let corsStatus = '失敗';
+    let preflightStatus = '可能觸發';
     
-    connectionStatus = 'error';
-    lastResponse = null;
-    
-    let errorMessage = '';
-    if (error.name === 'AbortError') {
-      errorMessage = '請求超時（15秒）- API 回應過慢';
-    } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      errorMessage = '網路連線失敗 - 請檢查網路連線或防火牆設定';
-    } else if (error.message.includes('CORS')) {
-      errorMessage = 'CORS 錯誤 - API 可能不允許跨域請求';
-    } else if (error.message.includes('HTML')) {
-      errorMessage = 'API 返回錯誤頁面 - 可能是 Google Apps Script 設定問題';
-    } else {
-      errorMessage = error.message;
+    if (error.message.includes('CORS')) {
+      corsStatus = 'CORS錯誤';
+      preflightStatus = '預檢失敗';
+    } else if (error.message.includes('Failed to fetch')) {
+      corsStatus = '連線失敗';
+      preflightStatus = '網路問題';
     }
     
-    updateDebugInfo('連線失敗', {
-      responseStatus: error.name || 'Error',
-      error: errorMessage
-    });
-    
-    showStatus(`❌ API 連線失敗: ${errorMessage}`, 'error');
-    throw error;
+    showResult(1, `❌ 方案一失敗\n錯誤: ${errorMsg}\n\n這可能是因為:\n1. Google Apps Script 權限設定錯誤\n2. URL 無效或過期\n3. 網路連線問題`, 'error');
+    updateDebug('簡化請求', corsStatus, preflightStatus, errorMsg);
   }
 }
 
-// 專項測試函數
-async function testCORS() {
-  showTestResult('正在測試 CORS 政策...', 'info');
+// 方案二：JSONP
+async function testMethod2() {
+  const url = document.getElementById('apiUrl2').value.trim();
+  if (!url) {
+    alert('請輸入 Google Apps Script URL');
+    return;
+  }
+  
+  showResult(2, '正在測試 JSONP 方案...', 'info');
+  updateDebug('JSONP', '測試中', '不會觸發');
   
   try {
-    const response = await fetch(API_URL, {
+    const callbackName = 'jsonp_callback_' + Date.now();
+    const script = document.createElement('script');
+    
+    // 設置超時
+    const timeout = setTimeout(() => {
+      document.head.removeChild(script);
+      delete window[callbackName];
+      showResult(2, '❌ JSONP 超時\nGoogle Apps Script 可能不支援 JSONP 回呼', 'error');
+      updateDebug('JSONP', '超時', '不會觸發', '10秒超時');
+    }, 10000);
+    
+    // 設置回呼函數
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      document.head.removeChild(script);
+      delete window[callbackName];
+      
+      showResult(2, `✅ 方案二（JSONP）成功！\n資料類型: ${Array.isArray(data) ? 'Array' : typeof data}\n資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}\n\n資料預覽:\n${JSON.stringify(data).substring(0, 200)}...`, 'success');
+      updateDebug('JSONP', '成功', '不會觸發');
+      testData = data;
+      showStatus('✅ 方案二：JSONP 成功！', 'success');
+    };
+    
+    // 載入腳本
+    script.src = `${url}?callback=${callbackName}&t=${Date.now()}`;
+    script.onerror = function() {
+      clearTimeout(timeout);
+      document.head.removeChild(script);
+      delete window[callbackName];
+      showResult(2, '❌ JSONP 載入失敗\n可能原因:\n1. Google Apps Script 不支援 JSONP\n2. URL 無效', 'error');
+      updateDebug('JSONP', '載入失敗', '不會觸發', 'Script load error');
+    };
+    
+    document.head.appendChild(script);
+    
+  } catch (error) {
+    showResult(2, `❌ JSONP 設置失敗\n錯誤: ${error.message}`, 'error');
+    updateDebug('JSONP', '設置失敗', '不會觸發', error.message);
+  }
+}
+
+// 方案三：標準 CORS 請求（需要後端支援）
+async function testMethod3() {
+  const url = document.getElementById('apiUrl3').value.trim();
+  if (!url) {
+    alert('請輸入修改後的 Google Apps Script URL');
+    return;
+  }
+  
+  showResult(3, '正在測試修改後的 CORS...', 'info');
+  updateDebug('修改後CORS', '測試中', '可能觸發');
+  
+  try {
+    // 先發送 OPTIONS 預檢請求測試
+    const optionsResponse = await fetch(url, {
       method: 'OPTIONS',
       headers: {
         'Origin': window.location.origin,
-        'Access-Control-Request-Method': 'GET'
+        'Access-Control-Request-Method': 'GET',
+        'Access-Control-Request-Headers': 'Content-Type'
       }
     });
     
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
-      'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
-      'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+    if (optionsResponse.ok) {
+      showResult(3, `✅ OPTIONS 預檢通過\n現在測試實際請求...`, 'info');
+      
+      // 發送實際請求
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const responseText = await response.text();
+      
+      if (response.ok) {
+        try {
+          const data = JSON.parse(responseText);
+          showResult(3, `✅ 方案三成功！\n預檢: 通過\n狀態: ${response.status}\n資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}`, 'success');
+          updateDebug('修改後CORS', '成功', '預檢通過');
+          testData = data;
+          showStatus('✅ 方案三：修改後CORS 成功！', 'success');
+        } catch (parseError) {
+          showResult(3, `⚠️ 請求成功但解析失敗\n回應: ${responseText.substring(0, 200)}`, 'error');
+          updateDebug('修改後CORS', '解析錯誤', '預檢通過', parseError.message);
+        }
+      } else {
+        showResult(3, `❌ 實際請求失敗\n狀態: ${response.status}\n回應: ${responseText.substring(0, 200)}`, 'error');
+        updateDebug('修改後CORS', '請求失敗', '預檢通過', `HTTP ${response.status}`);
+      }
+    } else {
+      showResult(3, `❌ OPTIONS 預檢失敗\n狀態: ${optionsResponse.status}\n請確認已在 Google Apps Script 中添加 doOptions 函數`, 'error');
+      updateDebug('修改後CORS', '預檢失敗', '觸發但失敗', `OPTIONS ${optionsResponse.status}`);
+    }
+    
+  } catch (error) {
+    showResult(3, `❌ 方案三失敗\n錯誤: ${error.message}\n\n請確認:\n1. 已在 Google Apps Script 添加 doOptions 函數\n2. 重新部署了應用程式`, 'error');
+    updateDebug('修改後CORS', 'CORS錯誤', '預檢失敗', error.message);
+  }
+}
+
+// 方案四：圖片標籤觸發
+async function testMethod4() {
+  const url = document.getElementById('apiUrl4').value.trim();
+  if (!url) {
+    alert('請輸入 Google Apps Script URL');
+    return;
+  }
+  
+  showResult(4, '正在測試圖片標籤觸發...', 'info');
+  updateDebug('圖片觸發', '測試中', '不會觸發');
+  
+  try {
+    const img = new Image();
+    const timeout = setTimeout(() => {
+      showResult(4, '❌ 圖片載入超時\n這個方法可能不適用於你的 Google Apps Script', 'error');
+      updateDebug('圖片觸發', '超時', '不會觸發', '載入超時');
+    }, 10000);
+    
+    img.onload = function() {
+      clearTimeout(timeout);
+      showResult(4, `✅ 方案四成功！\n圖片載入完成，請求已觸發\n注意：此方法只能觸發請求，無法接收 JSON 回應`, 'success');
+      updateDebug('圖片觸發', '成功', '不會觸發');
+      showStatus('✅ 方案四：圖片觸發成功！', 'success');
     };
     
-    showTestResult(`CORS 測試結果:\n${JSON.stringify(corsHeaders, null, 2)}`, 'success');
+    img.onerror = function() {
+      clearTimeout(timeout);
+      // 即使圖片載入失敗，請求可能也已經發送了
+      showResult(4, `⚠️ 圖片載入失敗，但請求可能已發送\n狀態: 圖片格式錯誤（這是正常的）\n此方法適合純觸發，不適合接收資料`, 'info');
+      updateDebug('圖片觸發', '部分成功', '不會觸發', '圖片格式錯誤（正常）');
+    };
+    
+    // 添加參數避免快取，觸發請求
+    img.src = `${url}?trigger=image&t=${Date.now()}`;
     
   } catch (error) {
-    showTestResult(`CORS 測試失敗: ${error.message}`, 'error');
+    showResult(4, `❌ 方案四失敗\n錯誤: ${error.message}`, 'error');
+    updateDebug('圖片觸發', '失敗', '不會觸發', error.message);
   }
 }
 
-async function testSSL() {
-  showTestResult('正在檢查 SSL 憑證...', 'info');
-  
-  if (!API_URL.startsWith('https://')) {
-    showTestResult('警告: API URL 不是 HTTPS，這可能在某些環境中造成問題', 'error');
+// 測試搜尋功能
+function testSearch() {
+  if (!workingUrl || !testData.length) {
+    alert('請先成功測試任一修復方案');
     return;
   }
   
-  try {
-    const response = await fetch(API_URL.replace('https://', 'https://'), {
-      method: 'HEAD'
+  const query = document.getElementById('testQuery').value.trim().toLowerCase();
+  const results = [];
+  
+  if (Array.isArray(testData)) {
+    testData.forEach((item, index) => {
+      let match = false;
+      let name = '未知物料';
+      let qty = '0';
+      let warehouse = '未指定';
+      let status = '正常';
+      
+      if (Array.isArray(item)) {
+        // 陣列格式
+        name = item[1] || `物料${index}`;
+        qty = item[2] || '0';
+        warehouse = item[3] || '未指定';
+        match = !query || item.some(field => 
+          field && field.toString().toLowerCase().includes(query));
+      } else if (typeof item === 'object' && item) {
+        // 物件格式
+        name = item.name || item.material || '未知物料';
+        qty = item.quantity || item.qty || '0';
+        warehouse = item.warehouse || item.location || '未指定';
+        match = !query || Object.values(item).some(field => 
+          field && field.toString().toLowerCase().includes(query));
+      }
+      
+      if (parseInt(qty) <= 0) status = '無庫存';
+      else if (parseInt(qty) <= 5) status = '低庫存';
+      
+      if (match) {
+        results.push({ name, qty, warehouse, status });
+      }
     });
-    
-    showTestResult('SSL 憑證檢查通過', 'success');
-    
-  } catch (error) {
-    showTestResult(`SSL 憑證問題: ${error.message}`, 'error');
-  }
-}
-
-async function testResponseFormat() {
-  showTestResult('正在測試回應格式...', 'info');
-  
-  try {
-    const response = await fetch(API_URL);
-    const text = await response.text();
-    
-    // 檢查是否為JSON格式
-    try {
-      const json = JSON.parse(text);
-      showTestResult(`回應格式檢查通過:\n類型: ${Array.isArray(json) ? 'Array' : typeof json}\n長度: ${Array.isArray(json) ? json.length : 'N/A'}`, 'success');
-    } catch (parseError) {
-      showTestResult(`回應格式錯誤:\n不是有效的JSON格式\n原始內容: ${text.substring(0, 200)}...`, 'error');
-    }
-    
-  } catch (error) {
-    showTestResult(`回應格式測試失敗: ${error.message}`, 'error');
-  }
-}
-
-function showTestResult(message, type) {
-  const resultsDiv = document.getElementById('testResults');
-  resultsDiv.style.display = 'block';
-  resultsDiv.className = `test-result test-${type}`;
-  resultsDiv.textContent = message;
-}
-
-// 顯示搜尋結果
-function displaySearchResults(data) {
-  if (!Array.isArray(data) || data.length === 0) {
-    document.getElementById('searchResults').style.display = 'none';
-    return;
   }
   
-  const resultsContainer = document.getElementById('searchResults');
-  const tbody = document.getElementById('resultsTable');
+  // 顯示結果
+  const resultDiv = document.getElementById('searchResult');
+  const tbody = document.getElementById('searchTable');
   
-  // 顯示前10筆資料作為範例
-  const displayData = data.slice(0, 10);
-  
-  tbody.innerHTML = displayData.map((item, index) => {
-    // 處理不同的資料結構
-    if (Array.isArray(item)) {
-      // 如果是陣列格式（CSV樣式）
-      return `
-        <tr>
-          <td>${item[1] || item[0] || `項目${index + 1}`}</td>
-          <td>${item[2] || '未知'}</td>
-          <td>${item[3] || '未指定'}</td>
-          <td>${item[4] || '未指定'}</td>
-          <td>${item[9] || '未知'}</td>
-        </tr>
-      `;
-    } else if (typeof item === 'object' && item !== null) {
-      // 如果是物件格式
-      return `
-        <tr>
-          <td>${item.name || item.material || item.item || '未知物料'}</td>
-          <td>${item.quantity || item.qty || item.amount || '0'}</td>
-          <td>${item.warehouse || item.location || '未指定'}</td>
-          <td>${item.spot || item.position || '未指定'}</td>
-          <td>${item.lastUpdated || item.date || '未知'}</td>
-        </tr>
-      `;
-    } else {
-      // 其他格式
-      return `
-        <tr>
-          <td>項目 ${index + 1}</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-        </tr>
-      `;
-    }
-  }).join('');
-  
-  resultsContainer.style.display = 'block';
-}
-
-// 事件綁定
-document.getElementById('testConnectionBtn').onclick = async () => {
-  const customUrl = document.getElementById('testApiUrl').value.trim();
-  if (customUrl && customUrl !== API_URL) {
-    // 如果用戶輸入了自訂 URL，測試該 URL
-    const originalUrl = API_URL;
-    API_URL = customUrl;
-    try {
-      await testConnection();
-    } finally {
-      API_URL = originalUrl; // 恢復原始 URL
-    }
+  if (results.length > 0) {
+    tbody.innerHTML = results.slice(0, 10).map(r => `
+      <tr class="${r.status === '無庫存' ? 'table-danger' : r.status === '低庫存' ? 'table-warning' : ''}">
+        <td>${r.name}</td>
+        <td>${r.qty}</td>
+        <td>${r.warehouse}</td>
+        <td><span class="badge ${r.status === '無庫存' ? 'bg-danger' : r.status === '低庫存' ? 'bg-warning text-dark' : 'bg-success'}">${r.status}</span></td>
+      </tr>
+    `).join('');
+    resultDiv.style.display = 'block';
   } else {
-    await testConnection();
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">查無結果</td></tr>';
+    resultDiv.style.display = 'block';
   }
-};
+}
 
-document.getElementById('refreshBtn').onclick = async () => {
-  await testConnection();
-};
-
-document.getElementById('searchBtn').onclick = () => {
-  const keyword = document.getElementById('search').value.trim().toLowerCase();
-  if (!keyword || !rawData.length) {
-    alert('請先載入資料或輸入搜尋關鍵字');
+// 執行全面診斷
+async function runAllTests() {
+  showStatus('🔍 正在執行全面 CORS 診斷...', 'connecting');
+  
+  const urls = [
+    document.getElementById('apiUrl1').value,
+    document.getElementById('apiUrl2').value,
+    document.getElementById('apiUrl3').value,
+    document.getElementById('apiUrl4').value
+  ].filter(url => url.trim());
+  
+  if (urls.length === 0) {
+    alert('請至少在一個方案中輸入 Google Apps Script URL');
     return;
   }
   
-  const filtered = rawData.filter(item => {
-    if (Array.isArray(item)) {
-      return item.some(field => 
-        field && field.toString().toLowerCase().includes(keyword)
-      );
-    } else if (typeof item === 'object' && item !== null) {
-      return Object.values(item).some(field => 
-        field && field.toString().toLowerCase().includes(keyword)
-      );
-    }
-    return false;
-  });
+  // 使用第一個可用的 URL 進行所有測試
+  const testUrl = urls[0];
+  document.getElementById('apiUrl1').value = testUrl;
+  document.getElementById('apiUrl2').value = testUrl;
+  document.getElementById('apiUrl3').value = testUrl;
+  document.getElementById('apiUrl4').value = testUrl;
   
-  displaySearchResults(filtered);
-};
+  // 依序測試所有方案
+  for (let i = 1; i <= 4; i++) {
+    try {
+      switch(i) {
+        case 1: await testMethod1(); break;
+        case 2: await testMethod2(); break;
+        case 3: await testMethod3(); break;
+        case 4: await testMethod4(); break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
+    } catch (error) {
+      console.error(`方案${i}測試失敗:`, error);
+    }
+  }
+  
+  showStatus('🏁 全面診斷完成！請檢查各方案結果', 'info');
+}
 
 // 初始化
-document.getElementById('testApiUrl').value = API_URL;
-updateDebugInfo('系統初始化中...');
-showStatus('<i class="fas fa-cog fa-spin"></i> 正在初始化系統...', 'connecting');
+showStatus('🚀 CORS 修復工具已就緒，請輸入你的 Google Apps Script URL 開始測試', 'connecting');
 
-// 自動執行連線測試
-setTimeout(async () => {
-  try {
-    await testConnection();
-  } catch (error) {
-    console.log('自動連線測試失敗，等待用戶手動測試');
+// 自動填入相同的URL到所有測試框
+function syncUrls(sourceId) {
+  const sourceUrl = document.getElementById(sourceId).value;
+  for (let i = 1; i <= 4; i++) {
+    if (`apiUrl${i}` !== sourceId) {
+      document.getElementById(`apiUrl${i}`).value = sourceUrl;
+    }
   }
-}, 1000);
+}
 
-// 全域錯誤處理
-window.addEventListener('unhandledrejection', event => {
-  console.error('未處理的 Promise 拒絕:', event.reason);
-  updateDebugInfo('系統錯誤', {
-    error: `未處理錯誤: ${event.reason.message || event.reason}`
+// 為所有URL輸入框添加同步功能
+for (let i = 1; i <= 4; i++) {
+  document.getElementById(`apiUrl${i}`).addEventListener('input', function() {
+    syncUrls(this.id);
   });
-});
+}
 
-window.addEventListener('error', event => {
-  console.error('JavaScript 錯誤:', event.error);
-  updateDebugInfo('JavaScript錯誤', {
-    error: `${event.error.message} (${event.filename}:${event.lineno})`
-  });
+// 頁面載入完成後的初始化
+document.addEventListener('DOMContentLoaded', function() {
+  // 預設填入原始URL
+  const defaultUrl = "https://script.google.com/macros/s/AKfycbzNbybTy_0vFGLR0hSeFW7FlXGbv44ho1P_xPMv6aE6WBRZuVOpTYXlGvElkdE4Veo/exec";
+  
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById(`apiUrl${i}`).value = defaultUrl;
+  }
+  
+  // 顯示使用提示
+  showStatus(`
+    <div>
+      <strong>📌 使用指南：</strong><br>
+      1️⃣ 所有URL框已自動填入，也可貼上新的URL<br>
+      2️⃣ 依序點擊各方案的測試按鈕<br>
+      3️⃣ 查看哪個方案顯示綠色✅成功<br>
+      4️⃣ 使用成功方案進行功能測試
+    </div>
+  `, 'info');
 });
-</script>
-</body>
-</html>
