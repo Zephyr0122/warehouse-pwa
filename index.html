@@ -1,548 +1,1181 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>CORS 測試工具 - 簡化版</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<style>
-  .test-card {
-    border: 2px solid #ddd;
-    border-radius: 10px;
-    padding: 20px;
-    margin: 15px 0;
-    transition: all 0.3s ease;
-  }
-  
-  .test-success {
-    border-color: #28a745;
-    background: #f8fff8;
-  }
-  
-  .test-error {
-    border-color: #dc3545;
-    background: #fff8f8;
-  }
-  
-  .test-loading {
-    border-color: #ffc107;
-    background: #fffef8;
-  }
-  
-  .result-box {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 10px 0;
-    font-family: monospace;
-    font-size: 14px;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  
-  .status-indicator {
-    padding: 20px;
-    text-align: center;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 18px;
-    margin: 20px 0;
-  }
-  
-  .btn-test {
-    padding: 12px 24px;
-    font-size: 16px;
-    border-radius: 8px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倉庫物料管理系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+        }
+        
+        .nav-pills .nav-link {
+            border-radius: 15px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 2px solid transparent;
+        }
+        
+        .nav-pills .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            color: white !important;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .btn {
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            border: none;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .table {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+        
+        .low-stock {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7) !important;
+            animation: pulse 2s infinite;
+        }
+        
+        .out-of-stock {
+            background: linear-gradient(135deg, #f8d7da, #fab1a0) !important;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .suggestion-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .suggestion-item:hover, .suggestion-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            transform: translateX(5px);
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .history-item {
+            border-left: 4px solid;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .history-item.in { border-left-color: #28a745; }
+        .history-item.out { border-left-color: #dc3545; }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-light">
-
-<div class="container py-4">
-  <h2 class="text-center mb-4">🔧 Google Apps Script CORS 測試工具</h2>
-  
-  <div class="status-indicator bg-primary text-white">
-    <i class="fas fa-rocket"></i> 測試工具已就緒！請輸入你的 API URL 開始測試
-  </div>
-
-  <!-- API URL 輸入 -->
-  <div class="card p-4 mb-4">
-    <h4><i class="fas fa-link text-primary"></i> API URL 設定</h4>
-    <div class="input-group input-group-lg">
-      <span class="input-group-text"><i class="fas fa-globe"></i></span>
-      <input 
-        id="apiUrl" 
-        class="form-control" 
-        placeholder="貼上你的 Google Apps Script Web App URL"
-        value="https://script.google.com/macros/s/AKfycbwfviDfJyDQ4Pa4-AcfbOq00Qufm-RCLnxhdauU7SpLon3Oia1nNglhp3gdrm2ipXV3DQ/exec"
-      >
+<body>
+    <div class="container">
+        <div class="main-container p-4">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-warehouse text-primary"></i> 
+                倉庫物料管理系統
+            </h2>
+            
+            <!-- 導航標籤 -->
+            <ul class="nav nav-pills justify-content-center mb-4" id="mainTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="inventory-tab" data-bs-toggle="pill" data-bs-target="#inventory" type="button">
+                        <i class="fas fa-boxes"></i> 庫存管理
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="search-tab" data-bs-toggle="pill" data-bs-target="#search" type="button">
+                        <i class="fas fa-search"></i> 查詢統計
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history" type="button">
+                        <i class="fas fa-history"></i> 歷史記錄
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="mainTabsContent">
+                <!-- 庫存管理頁面 -->
+                <div class="tab-pane fade show active" id="inventory" role="tabpanel">
+                    <div class="row">
+                        <!-- 入庫 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-plus-circle"></i> 入庫作業</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-container mb-3">
+                                        <input id="in_name" class="form-control" placeholder="物料名稱" autocomplete="off">
+                                        <div id="in_suggestions" class="suggestion-dropdown"></div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <input id="in_qty" type="number" min="1" class="form-control" placeholder="數量">
+                                        </div>
+                                        <div class="col-6">
+                                            <input id="in_threshold" type="number" min="0" class="form-control" placeholder="警戒值" value="5">
+                                        </div>
+                                    </div>
+                                    <input id="in_warehouse" class="form-control mb-3" placeholder="倉庫">
+                                    <input id="in_locationSpot" class="form-control mb-3" placeholder="地點">
+                                    <input id="in_location" class="form-control mb-3" placeholder="位置">
+                                    <input id="in_sn" class="form-control mb-3" placeholder="序號">
+                                    <textarea id="in_note" class="form-control mb-3" placeholder="備註" rows="2"></textarea>
+                                    <button id="inBtn" class="btn btn-success w-100">
+                                        <i class="fas fa-plus"></i> 確認入庫
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 出庫 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-danger text-white">
+                                    <h5><i class="fas fa-minus-circle"></i> 出庫作業</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-container mb-3">
+                                        <input id="out_name" class="form-control" placeholder="物料名稱" autocomplete="off">
+                                        <div id="out_suggestions" class="suggestion-dropdown"></div>
+                                    </div>
+                                    <input id="out_qty" type="number" min="1" class="form-control mb-3" placeholder="數量">
+                                    <input id="out_warehouse" class="form-control mb-3" placeholder="倉庫">
+                                    <input id="out_locationSpot" class="form-control mb-3" placeholder="地點">
+                                    <input id="out_location" class="form-control mb-3" placeholder="位置">
+                                    <input id="out_sn" class="form-control mb-3" placeholder="序號">
+                                    <div id="stockWarning" class="alert alert-warning d-none">
+                                        <i class="fas fa-exclamation-triangle"></i> 庫存不足警告
+                                    </div>
+                                    <button id="outBtn" class="btn btn-danger w-100">
+                                        <i class="fas fa-minus"></i> 確認出庫
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 低庫存警告 -->
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5><i class="fas fa-exclamation-triangle"></i> 低庫存警告</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>名稱</th><th>數量</th><th>警戒值</th><th>倉庫</th><th>地點</th><th>位置</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lowStockTable">
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">載入中...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 查詢統計頁面 -->
+                <div class="tab-pane fade" id="search" role="tabpanel">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5><i class="fas fa-search"></i> 庫存查詢</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <input id="searchKeyword" class="form-control" placeholder="搜尋物料名稱/序號">
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="searchWarehouse" class="form-select">
+                                        <option value="">全部倉庫</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="searchLocation" class="form-select">
+                                        <option value="">全部地點</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="searchBtn" class="btn btn-primary w-100">
+                                        <i class="fas fa-search"></i> 查詢
+                                    </button>
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="exportBtn" class="btn btn-success w-100">
+                                        <i class="fas fa-download"></i> 匯出
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="searchResultTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">請輸入搜尋條件</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 統計資訊 -->
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="totalItems" class="text-primary">0</h3>
+                                    <p class="mb-0">總物料數</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="lowStockCount" class="text-warning">0</h3>
+                                    <p class="mb-0">低庫存</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="outOfStockCount" class="text-danger">0</h3>
+                                    <p class="mb-0">無庫存</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card text-center">
+                                <div class="card-body">
+                                    <h3 id="totalQuantity" class="text-success">0</h3>
+                                    <p class="mb-0">總數量</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 歷史記錄頁面 -->
+                <div class="tab-pane fade" id="history" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5><i class="fas fa-history"></i> 出入庫歷史記錄</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <input id="historySearch" class="form-control" placeholder="搜尋物料名稱">
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="historyAction" class="form-select">
+                                        <option value="">全部動作</option>
+                                        <option value="入庫">入庫</option>
+                                        <option value="出庫">出庫</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input id="historyDateStart" type="date" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <input id="historyDateEnd" type="date" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <button id="historySearchBtn" class="btn btn-info w-100">
+                                        <i class="fas fa-search"></i> 搜尋
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="historyList" class="fade-in" style="max-height: 500px; overflow-y: auto;">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-history fa-2x mb-3"></i>
+                                    <p>載入歷史記錄中...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <small class="text-muted mt-2">
-      <i class="fas fa-info-circle"></i> 
-      確認 Google Apps Script 已部署為「網路應用程式」且權限設為「任何人都可以存取」
-    </small>
-  </div>
-
-  <!-- 測試方案 -->
-  <div class="row">
-    <!-- 方案 1: 基本 GET 請求 -->
-    <div class="col-md-6 mb-4">
-      <div class="test-card" id="card1">
-        <h5><i class="fas fa-1 text-primary"></i> 基本 GET 請求</h5>
-        <p>使用最簡單的請求方式，避開 CORS 預檢</p>
-        <button onclick="test1()" class="btn btn-primary btn-test w-100">
-          <i class="fas fa-play"></i> 開始測試
-        </button>
-        <div id="result1" class="result-box" style="display:none;"></div>
-      </div>
+    
+    <!-- 載入中動畫 -->
+    <div id="loading" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 9999; display: none !important;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">載入中...</span>
+        </div>
     </div>
 
-    <!-- 方案 2: 無 Headers 請求 -->
-    <div class="col-md-6 mb-4">
-      <div class="test-card" id="card2">
-        <h5><i class="fas fa-2 text-info"></i> 無 Headers 請求</h5>
-        <p>完全不設置任何自訂標頭</p>
-        <button onclick="test2()" class="btn btn-info btn-test w-100">
-          <i class="fas fa-play"></i> 開始測試
-        </button>
-        <div id="result2" class="result-box" style="display:none;"></div>
-      </div>
-    </div>
-
-    <!-- 方案 3: JSONP -->
-    <div class="col-md-6 mb-4">
-      <div class="test-card" id="card3">
-        <h5><i class="fas fa-3 text-success"></i> JSONP 方式</h5>
-        <p>使用 Script 標籤，完全繞過 CORS</p>
-        <button onclick="test3()" class="btn btn-success btn-test w-100">
-          <i class="fas fa-play"></i> 開始測試
-        </button>
-        <div id="result3" class="result-box" style="display:none;"></div>
-      </div>
-    </div>
-
-    <!-- 方案 4: 修改後的 CORS -->
-    <div class="col-md-6 mb-4">
-      <div class="test-card" id="card4">
-        <h5><i class="fas fa-4 text-warning"></i> 修改後 CORS</h5>
-        <p>需要在 Google Apps Script 中添加 doOptions 函數</p>
-        <button onclick="test4()" class="btn btn-warning btn-test w-100">
-          <i class="fas fa-play"></i> 開始測試
-        </button>
-        <div id="result4" class="result-box" style="display:none;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 一鍵測試所有方案 -->
-  <div class="text-center mb-4">
-    <button onclick="testAll()" class="btn btn-dark btn-lg">
-      <i class="fas fa-rocket"></i> 一鍵測試所有方案
-    </button>
-  </div>
-
-  <!-- 測試結果摘要 -->
-  <div class="card p-4">
-    <h4><i class="fas fa-chart-line text-success"></i> 測試結果摘要</h4>
-    <div id="summary" class="alert alert-light">
-      尚未開始測試
-    </div>
-    
-    <!-- 如果成功，顯示資料預覽 -->
-    <div id="dataPreview" style="display:none;">
-      <h5>資料預覽：</h5>
-      <div class="table-responsive">
-        <table class="table table-sm table-striped">
-          <thead class="table-primary">
-            <tr><th>項目</th><th>內容</th><th>類型</th></tr>
-          </thead>
-          <tbody id="previewTable"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-let successfulMethod = null;
-let testData = null;
-
-// 顯示結果
-function showResult(methodNum, message, type, data = null) {
-  const card = document.getElementById(`card${methodNum}`);
-  const result = document.getElementById(`result${methodNum}`);
-  
-  // 移除所有狀態類別
-  card.classList.remove('test-success', 'test-error', 'test-loading');
-  
-  // 添加對應狀態
-  if (type === 'success') {
-    card.classList.add('test-success');
-    successfulMethod = methodNum;
-    testData = data;
-  } else if (type === 'error') {
-    card.classList.add('test-error');
-  } else if (type === 'loading') {
-    card.classList.add('test-loading');
-  }
-  
-  result.style.display = 'block';
-  result.innerHTML = message;
-  
-  updateSummary();
-}
-
-// 更新摘要
-function updateSummary() {
-  const summary = document.getElementById('summary');
-  const methods = ['基本 GET', '無 Headers', 'JSONP', '修改後 CORS'];
-  
-  if (successfulMethod) {
-    summary.className = 'alert alert-success';
-    summary.innerHTML = `
-      <strong><i class="fas fa-check-circle"></i> 測試成功！</strong><br>
-      成功方案：<strong>${methods[successfulMethod - 1]}</strong><br>
-      資料筆數：${testData && Array.isArray(testData) ? testData.length : '未知'}
-    `;
-    
-    // 顯示資料預覽
-    if (testData && Array.isArray(testData)) {
-      showDataPreview(testData);
-    }
-  } else {
-    summary.className = 'alert alert-light';
-    summary.innerHTML = '請選擇測試方案，或點擊「一鍵測試所有方案」';
-  }
-}
-
-// 顯示資料預覽
-function showDataPreview(data) {
-  const preview = document.getElementById('dataPreview');
-  const table = document.getElementById('previewTable');
-  
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    preview.style.display = 'none';
-    return;
-  }
-  
-  // 顯示前5筆資料
-  const sampleData = data.slice(0, 5);
-  let html = '';
-  
-  sampleData.forEach((item, index) => {
-    let content, type;
-    
-    if (Array.isArray(item)) {
-      content = JSON.stringify(item).substring(0, 100) + '...';
-      type = `陣列 (${item.length}項)`;
-    } else if (typeof item === 'object' && item !== null) {
-      content = JSON.stringify(item).substring(0, 100) + '...';
-      type = `物件 (${Object.keys(item).length}欄位)`;
-    } else {
-      content = String(item).substring(0, 100);
-      type = typeof item;
-    }
-    
-    html += `
-      <tr>
-        <td>第 ${index + 1} 筆</td>
-        <td><small>${content}</small></td>
-        <td><span class="badge bg-secondary">${type}</span></td>
-      </tr>
-    `;
-  });
-  
-  table.innerHTML = html;
-  preview.style.display = 'block';
-}
-
-// 測試方案 1: 基本 GET 請求
-async function test1() {
-  const url = document.getElementById('apiUrl').value.trim();
-  if (!url) {
-    alert('請輸入 Google Apps Script URL');
-    return;
-  }
-  
-  showResult(1, '<i class="fas fa-spinner fa-spin"></i> 正在測試基本 GET 請求...', 'loading');
-  
-  try {
-    console.log('測試1: 基本 GET 請求');
-    console.log('URL:', url);
-    
-    const response = await fetch(url + '?_t=' + Date.now(), {
-      method: 'GET'
-    });
-    
-    console.log('回應狀態:', response.status);
-    const text = await response.text();
-    console.log('回應內容長度:', text.length);
-    console.log('回應內容預覽:', text.substring(0, 200));
-    
-    if (response.ok) {
-      try {
-        const data = JSON.parse(text);
-        showResult(1, `
-          <strong>✅ 成功！</strong><br>
-          狀態碼: ${response.status}<br>
-          資料類型: ${Array.isArray(data) ? 'Array' : typeof data}<br>
-          資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}<br>
-          <small>回應預覽: ${text.substring(0, 100)}...</small>
-        `, 'success', data);
-      } catch (parseError) {
-        showResult(1, `
-          <strong>⚠️ 請求成功但 JSON 解析失敗</strong><br>
-          狀態碼: ${response.status}<br>
-          錯誤: ${parseError.message}<br>
-          <small>原始回應: ${text.substring(0, 200)}...</small>
-        `, 'error');
-      }
-    } else {
-      showResult(1, `
-        <strong>❌ 請求失敗</strong><br>
-        狀態碼: ${response.status} ${response.statusText}<br>
-        <small>回應: ${text.substring(0, 200)}...</small>
-      `, 'error');
-    }
-  } catch (error) {
-    console.error('測試1失敗:', error);
-    showResult(1, `
-      <strong>❌ 連線失敗</strong><br>
-      錯誤: ${error.message}<br>
-      <small>可能是 CORS 問題或網路問題</small>
-    `, 'error');
-  }
-}
-
-// 測試方案 2: 無 Headers 請求
-async function test2() {
-  const url = document.getElementById('apiUrl').value.trim();
-  if (!url) {
-    alert('請輸入 Google Apps Script URL');
-    return;
-  }
-  
-  showResult(2, '<i class="fas fa-spinner fa-spin"></i> 正在測試無 Headers 請求...', 'loading');
-  
-  try {
-    console.log('測試2: 無 Headers 請求');
-    
-    const response = await fetch(url + '?_t=' + Date.now());
-    
-    console.log('回應狀態:', response.status);
-    const text = await response.text();
-    
-    if (response.ok) {
-      try {
-        const data = JSON.parse(text);
-        showResult(2, `
-          <strong>✅ 成功！</strong><br>
-          狀態碼: ${response.status}<br>
-          資料類型: ${Array.isArray(data) ? 'Array' : typeof data}<br>
-          資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}
-        `, 'success', data);
-      } catch (parseError) {
-        showResult(2, `
-          <strong>⚠️ 請求成功但 JSON 解析失敗</strong><br>
-          錯誤: ${parseError.message}
-        `, 'error');
-      }
-    } else {
-      showResult(2, `
-        <strong>❌ 請求失敗</strong><br>
-        狀態碼: ${response.status}
-      `, 'error');
-    }
-  } catch (error) {
-    console.error('測試2失敗:', error);
-    showResult(2, `
-      <strong>❌ 連線失敗</strong><br>
-      錯誤: ${error.message}
-    `, 'error');
-  }
-}
-
-// 測試方案 3: JSONP
-async function test3() {
-  const url = document.getElementById('apiUrl').value.trim();
-  if (!url) {
-    alert('請輸入 Google Apps Script URL');
-    return;
-  }
-  
-  showResult(3, '<i class="fas fa-spinner fa-spin"></i> 正在測試 JSONP...', 'loading');
-  
-  try {
-    console.log('測試3: JSONP 方式');
-    
-    const callbackName = 'jsonp_' + Date.now();
-    const script = document.createElement('script');
-    
-    const timeout = setTimeout(() => {
-      document.head.removeChild(script);
-      delete window[callbackName];
-      showResult(3, `
-        <strong>❌ JSONP 超時</strong><br>
-        可能 Google Apps Script 不支援 JSONP callback
-      `, 'error');
-    }, 10000);
-    
-    window[callbackName] = function(data) {
-      clearTimeout(timeout);
-      document.head.removeChild(script);
-      delete window[callbackName];
-      
-      showResult(3, `
-        <strong>✅ JSONP 成功！</strong><br>
-        資料類型: ${Array.isArray(data) ? 'Array' : typeof data}<br>
-        資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}
-      `, 'success', data);
-    };
-    
-    script.onerror = function() {
-      clearTimeout(timeout);
-      document.head.removeChild(script);
-      delete window[callbackName];
-      showResult(3, `
-        <strong>❌ JSONP 載入失敗</strong><br>
-        Google Apps Script 可能不支援 JSONP
-      `, 'error');
-    };
-    
-    script.src = `${url}?callback=${callbackName}&_t=${Date.now()}`;
-    document.head.appendChild(script);
-    
-  } catch (error) {
-    console.error('測試3失敗:', error);
-    showResult(3, `
-      <strong>❌ JSONP 設置失敗</strong><br>
-      錯誤: ${error.message}
-    `, 'error');
-  }
-}
-
-// 測試方案 4: 修改後 CORS
-async function test4() {
-  const url = document.getElementById('apiUrl').value.trim();
-  if (!url) {
-    alert('請輸入 Google Apps Script URL');
-    return;
-  }
-  
-  showResult(4, '<i class="fas fa-spinner fa-spin"></i> 正在測試修改後 CORS...', 'loading');
-  
-  try {
-    console.log('測試4: 修改後 CORS');
-    
-    // 先測試 OPTIONS 預檢
-    const optionsResponse = await fetch(url, {
-      method: 'OPTIONS',
-      headers: {
-        'Origin': window.location.origin,
-        'Access-Control-Request-Method': 'GET'
-      }
-    });
-    
-    console.log('OPTIONS 回應:', optionsResponse.status);
-    
-    if (optionsResponse.ok) {
-      // OPTIONS 成功，測試實際請求
-      const response = await fetch(url + '?_t=' + Date.now(), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 設定 API URL
+        const API_URL = "https://script.google.com/macros/s/AKfycbwfviDfJyDQ4Pa4-AcfbOq00Qufm-RCLnxhdauU7SpLon3Oia1nNglhp3gdrm2ipXV3DQ/exec";
+        
+        // 全域變數
+        let inventoryData = [];
+        let historyData = [];
+        
+        // 智能建議系統
+        class SmartSuggestion {
+            constructor(inputId) {
+                this.inputId = inputId;
+                this.suggestionsId = inputId.replace('_name', '_suggestions');
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+                this.init();
+            }
+            
+            init() {
+                const input = document.getElementById(this.inputId);
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                
+                if (!input || !suggestionsDiv) return;
+                
+                input.addEventListener('input', (e) => this.handleInput(e.target.value));
+                input.addEventListener('keydown', (e) => this.handleKeydown(e));
+                
+                // 點擊其他地方時隱藏建議
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.input-container')) {
+                        this.hideSuggestions();
+                    }
+                });
+            }
+            
+            handleInput(value) {
+                if (value.length < 1) {
+                    this.hideSuggestions();
+                    return;
+                }
+                
+                const suggestions = this.findSimilarItems(value);
+                this.showSuggestions(suggestions);
+            }
+            
+            findSimilarItems(keyword) {
+                if (!inventoryData || inventoryData.length <= 1) return [];
+                
+                const normalizedKeyword = keyword.toLowerCase();
+                const suggestions = [];
+                
+                // 跳過標題行，搜尋相似物品
+                inventoryData.slice(1).forEach(row => {
+                    if (!row || row.length < 6) return;
+                    
+                    const [name, qty, warehouse, locationSpot, location, sn, note, threshold] = row;
+                    const normalizedName = (name || '').toString().toLowerCase();
+                    const normalizedSn = (sn || '').toString().toLowerCase();
+                    
+                    let score = 0;
+                    if (normalizedName === normalizedKeyword) score = 100;
+                    else if (normalizedName.startsWith(normalizedKeyword)) score = 90;
+                    else if (normalizedName.includes(normalizedKeyword)) score = 70;
+                    else if (normalizedSn.includes(normalizedKeyword)) score = 60;
+                    
+                    if (score > 0) {
+                        suggestions.push({
+                            score,
+                            name: name || '',
+                            qty: parseInt(qty) || 0,
+                            warehouse: warehouse || '',
+                            locationSpot: locationSpot || '',
+                            location: location || '',
+                            serialNumber: sn || '',
+                            note: note || '',
+                            threshold: parseInt(threshold) || 5,
+                            data: row
+                        });
+                    }
+                });
+                
+                return suggestions.sort((a, b) => b.score - a.score).slice(0, 5);
+            }
+            
+            showSuggestions(suggestions) {
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                this.currentSuggestions = suggestions;
+                this.selectedIndex = -1;
+                
+                if (suggestions.length === 0) {
+                    this.hideSuggestions();
+                    return;
+                }
+                
+                suggestionsDiv.innerHTML = suggestions.map((item, index) => `
+                    <div class="suggestion-item" data-index="${index}">
+                        <div class="fw-bold">${item.name}</div>
+                        <div class="text-muted small">
+                            庫存: ${item.qty} 件 | ${item.warehouse} - ${item.locationSpot} - ${item.location}
+                        </div>
+                        ${item.serialNumber ? `<div class="text-success small">序號: ${item.serialNumber}</div>` : ''}
+                    </div>
+                `).join('');
+                
+                // 綁定點擊事件
+                suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
+                    item.addEventListener('click', () => this.selectSuggestion(index));
+                });
+                
+                suggestionsDiv.style.display = 'block';
+            }
+            
+            hideSuggestions() {
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                if (suggestionsDiv) {
+                    suggestionsDiv.style.display = 'none';
+                    suggestionsDiv.innerHTML = '';
+                }
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+            }
+            
+            handleKeydown(e) {
+                if (this.currentSuggestions.length === 0) return;
+                
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.moveSelection(1);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.moveSelection(-1);
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (this.selectedIndex >= 0) {
+                            this.selectSuggestion(this.selectedIndex);
+                        }
+                        break;
+                    case 'Escape':
+                        this.hideSuggestions();
+                        break;
+                }
+            }
+            
+            moveSelection(direction) {
+                const maxIndex = this.currentSuggestions.length - 1;
+                this.selectedIndex += direction;
+                
+                if (this.selectedIndex > maxIndex) this.selectedIndex = 0;
+                else if (this.selectedIndex < 0) this.selectedIndex = maxIndex;
+                
+                const suggestionsDiv = document.getElementById(this.suggestionsId);
+                const items = suggestionsDiv.querySelectorAll('.suggestion-item');
+                items.forEach((item, index) => {
+                    item.classList.toggle('active', index === this.selectedIndex);
+                });
+            }
+            
+            selectSuggestion(index) {
+                if (index < 0 || index >= this.currentSuggestions.length) return;
+                
+                const suggestion = this.currentSuggestions[index];
+                const inputType = this.inputId.split('_')[0]; // 'in' or 'out'
+                
+                // 填入物料名稱
+                document.getElementById(this.inputId).value = suggestion.name;
+                
+                // 自動填入其他相關資訊
+                if (inputType === 'in') {
+                    document.getElementById('in_warehouse').value = suggestion.warehouse;
+                    document.getElementById('in_locationSpot').value = suggestion.locationSpot;
+                    document.getElementById('in_location').value = suggestion.location;
+                    document.getElementById('in_threshold').value = suggestion.threshold;
+                    document.getElementById('in_qty').focus();
+                } else {
+                    document.getElementById('out_warehouse').value = suggestion.warehouse;
+                    document.getElementById('out_locationSpot').value = suggestion.locationSpot;
+                    document.getElementById('out_location').value = suggestion.location;
+                    document.getElementById('out_sn').value = suggestion.serialNumber;
+                    
+                    const qtyInput = document.getElementById('out_qty');
+                    qtyInput.focus();
+                    qtyInput.setAttribute('placeholder', `數量 (目前庫存: ${suggestion.qty} 件)`);
+                }
+                
+                this.hideSuggestions();
+            }
         }
-      });
-      
-      if (response.ok) {
-        const text = await response.text();
-        try {
-          const data = JSON.parse(text);
-          showResult(4, `
-            <strong>✅ 修改後 CORS 成功！</strong><br>
-            OPTIONS 預檢: 通過<br>
-            實際請求: 成功<br>
-            資料筆數: ${Array.isArray(data) ? data.length : 'N/A'}
-          `, 'success', data);
-        } catch (parseError) {
-          showResult(4, `
-            <strong>⚠️ 預檢通過但資料解析失敗</strong><br>
-            錯誤: ${parseError.message}
-          `, 'error');
+        
+        // 初始化智能建議
+        const inSuggestion = new SmartSuggestion('in_name');
+        const outSuggestion = new SmartSuggestion('out_name');
+        
+        // 顯示載入中
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
         }
-      } else {
-        showResult(4, `
-          <strong>❌ 實際請求失敗</strong><br>
-          OPTIONS: 通過<br>
-          GET 請求: ${response.status}
-        `, 'error');
-      }
-    } else {
-      showResult(4, `
-        <strong>❌ OPTIONS 預檢失敗</strong><br>
-        狀態: ${optionsResponse.status}<br>
-        <small>請確認已在 Google Apps Script 中添加 doOptions 函數</small>
-      `, 'error');
-    }
-    
-  } catch (error) {
-    console.error('測試4失敗:', error);
-    showResult(4, `
-      <strong>❌ CORS 測試失敗</strong><br>
-      錯誤: ${error.message}
-    `, 'error');
-  }
-}
-
-// 一鍵測試所有方案
-async function testAll() {
-  const url = document.getElementById('apiUrl').value.trim();
-  if (!url) {
-    alert('請輸入 Google Apps Script URL');
-    return;
-  }
-  
-  // 重置狀態
-  successfulMethod = null;
-  testData = null;
-  document.getElementById('dataPreview').style.display = 'none';
-  
-  const summary = document.getElementById('summary');
-  summary.className = 'alert alert-info';
-  summary.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在執行全面測試...';
-  
-  // 依序測試所有方案
-  for (let i = 1; i <= 4; i++) {
-    if (successfulMethod) break; // 如果有成功的就停止
-    
-    switch (i) {
-      case 1: await test1(); break;
-      case 2: await test2(); break;
-      case 3: await test3(); break;
-      case 4: await test4(); break;
-    }
-    
-    // 等待一秒再測試下一個
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  
-  if (!successfulMethod) {
-    summary.className = 'alert alert-danger';
-    summary.innerHTML = `
-      <strong><i class="fas fa-times-circle"></i> 所有方案都失敗了</strong><br>
-      請檢查：<br>
-      1. Google Apps Script URL 是否正確<br>
-      2. 是否已正確部署為「網路應用程式」<br>
-      3. 權限是否設為「任何人都可以存取」
-    `;
-  }
-}
-
-// 頁面載入完成
-console.log('CORS 測試工具已載入');
-</script>
+        
+        // 隱藏載入中
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // 載入庫存資料
+        async function loadInventoryData() {
+            try {
+                showLoading();
+                const response = await fetch(API_URL);
+                inventoryData = await response.json();
+                
+                updateStatistics();
+                renderLowStockTable();
+                updateFilters();
+                hideLoading();
+            } catch (error) {
+                console.error('載入庫存資料失敗:', error);
+                alert('載入資料失敗，請檢查網路連線');
+                hideLoading();
+            }
+        }
+        
+        // 載入歷史記錄
+        async function loadHistoryData() {
+            try {
+                const response = await fetch(API_URL + "?action=getHistory");
+                historyData = await response.json();
+                renderHistoryList();
+            } catch (error) {
+                console.error('載入歷史記錄失敗:', error);
+                historyData = [];
+                renderHistoryList();
+            }
+        }
+        
+        // 更新統計資料
+        function updateStatistics() {
+            if (!inventoryData || inventoryData.length <= 1) return;
+            
+            let totalItems = 0, lowStockCount = 0, outOfStockCount = 0, totalQuantity = 0;
+            
+            inventoryData.slice(1).forEach(row => {
+                if (!row || row.length < 3) return;
+                
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                
+                totalItems++;
+                totalQuantity += qty;
+                
+                if (qty === 0) outOfStockCount++;
+                else if (qty <= threshold) lowStockCount++;
+            });
+            
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('lowStockCount').textContent = lowStockCount;
+            document.getElementById('outOfStockCount').textContent = outOfStockCount;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
+        }
+        
+        // 渲染低庫存表格
+        function renderLowStockTable() {
+            const tbody = document.getElementById('lowStockTable');
+            if (!inventoryData || inventoryData.length <= 1) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">無資料</td></tr>';
+                return;
+            }
+            
+            const lowStockItems = inventoryData.slice(1).filter(row => {
+                if (!row || row.length < 8) return false;
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                return qty <= threshold;
+            });
+            
+            if (lowStockItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">目前無低庫存物料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = lowStockItems.map(row => {
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                const className = qty === 0 ? 'out-of-stock' : 'low-stock';
+                
+                return `
+                    <tr class="${className}">
+                        <td>${row[0] || '-'}</td>
+                        <td><strong>${qty}</strong></td>
+                        <td>${threshold}</td>
+                        <td>${row[2] || '-'}</td>
+                        <td>${row[3] || '-'}</td>
+                        <td>${row[4] || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 更新篩選器選項
+        function updateFilters() {
+            if (!inventoryData || inventoryData.length <= 1) return;
+            
+            const warehouses = new Set();
+            const locations = new Set();
+            
+            inventoryData.slice(1).forEach(row => {
+                if (row && row.length > 4) {
+                    if (row[2] && row[2].trim()) warehouses.add(row[2].trim());
+                    if (row[3] && row[3].trim()) locations.add(row[3].trim());
+                }
+            });
+            
+            // 更新倉庫篩選器
+            const warehouseSelect = document.getElementById('searchWarehouse');
+            warehouseSelect.innerHTML = '<option value="">全部倉庫</option>';
+            Array.from(warehouses).sort().forEach(w => {
+                warehouseSelect.innerHTML += `<option value="${w}">${w}</option>`;
+            });
+            
+            // 更新地點篩選器
+            const locationSelect = document.getElementById('searchLocation');
+            locationSelect.innerHTML = '<option value="">全部地點</option>';
+            Array.from(locations).sort().forEach(l => {
+                locationSelect.innerHTML += `<option value="${l}">${l}</option>`;
+            });
+        }
+        
+        // 執行搜尋
+        function performSearch() {
+            const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+            const warehouse = document.getElementById('searchWarehouse').value;
+            const location = document.getElementById('searchLocation').value;
+            
+            if (!inventoryData || inventoryData.length <= 1) {
+                renderSearchResults([]);
+                return;
+            }
+            
+            const results = inventoryData.slice(1).filter(row => {
+                if (!row || row.length < 7) return false;
+                
+                const matchKeyword = !keyword || 
+                    (row[0] || '').toString().toLowerCase().includes(keyword) ||
+                    (row[5] || '').toString().toLowerCase().includes(keyword);
+                const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
+                const matchLocation = !location || (row[3] || '').trim() === location;
+                
+                return matchKeyword && matchWarehouse && matchLocation;
+            });
+            
+            renderSearchResults(results);
+        }
+        
+        // 渲染搜尋結果
+        function renderSearchResults(results) {
+            const tbody = document.getElementById('searchResultTable');
+            
+            if (results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">查無符合條件的資料</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = results.map(row => {
+                const qty = parseInt(row[1]) || 0;
+                const threshold = parseInt(row[7]) || 5;
+                const className = qty <= threshold ? (qty === 0 ? 'out-of-stock' : 'low-stock') : '';
+                
+                return `
+                    <tr class="${className}">
+                        <td>${row[0] || '-'}</td>
+                        <td><strong>${qty}</strong></td>
+                        <td>${row[2] || '-'}</td>
+                        <td>${row[3] || '-'}</td>
+                        <td>${row[4] || '-'}</td>
+                        <td><small>${row[5] || '-'}</small></td>
+                        <td><small>${row[6] || '-'}</small></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 渲染歷史記錄
+        function renderHistoryList() {
+            const historyContainer = document.getElementById('historyList');
+            
+            if (!historyData || historyData.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-3"></i>
+                        <p>暫無歷史記錄</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 應用篩選條件
+            const search = document.getElementById('historySearch').value.trim().toLowerCase();
+            const action = document.getElementById('historyAction').value;
+            const dateStart = document.getElementById('historyDateStart').value;
+            const dateEnd = document.getElementById('historyDateEnd').value;
+            
+            let filteredData = historyData.filter(record => {
+                if (!record) return false;
+                
+                const matchSearch = !search || 
+                    (record.material && record.material.toLowerCase().includes(search));
+                const matchAction = !action || record.action === action;
+                
+                let matchDate = true;
+                if (dateStart || dateEnd) {
+                    if (!record.timestamp) return false;
+                    const recordDate = new Date(record.timestamp);
+                    if (isNaN(recordDate.getTime())) return false;
+                    
+                    if (dateStart && dateEnd) {
+                        const start = new Date(dateStart);
+                        const end = new Date(dateEnd + 'T23:59:59');
+                        matchDate = recordDate >= start && recordDate <= end;
+                    } else if (dateStart) {
+                        const start = new Date(dateStart);
+                        matchDate = recordDate >= start;
+                    } else if (dateEnd) {
+                        const end = new Date(dateEnd + 'T23:59:59');
+                        matchDate = recordDate <= end;
+                    }
+                }
+                
+                return matchSearch && matchAction && matchDate;
+            });
+            
+            // 按時間排序（最新的在前）
+            filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // 限制顯示數量
+            filteredData = filteredData.slice(0, 50);
+            
+            historyContainer.innerHTML = filteredData.map(record => {
+                const date = new Date(record.timestamp);
+                const dateStr = isNaN(date.getTime()) ? '日期錯誤' : 
+                    date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW');
+                
+                return `
+                    <div class="card mb-2 history-item ${record.action === '入庫' ? 'in' : 'out'}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas ${record.action === '入庫' ? 'fa-plus-circle text-success' : 'fa-minus-circle text-danger'} me-2"></i>
+                                        <strong>${record.action || '未知動作'}</strong>
+                                        <span class="badge ${record.action === '入庫' ? 'bg-success' : 'bg-danger'} ms-2">
+                                            ${record.quantity || 0} 件
+                                        </span>
+                                    </div>
+                                    <div class="text-muted">
+                                        <div class="fw-bold mb-1">${record.material || '未知物料'}</div>
+                                        <div class="small">
+                                            <i class="fas fa-warehouse me-1"></i>${record.warehouse || '-'}
+                                            <i class="fas fa-map-marker-alt ms-2 me-1"></i>${record.locationSpot || '-'}
+                                            <i class="fas fa-cube ms-2 me-1"></i>${record.location || '-'}
+                                        </div>
+                                        ${record.serialNumber ? `<div class="small"><i class="fas fa-barcode me-1"></i>${record.serialNumber}</div>` : ''}
+                                        ${record.note ? `<div class="small"><i class="fas fa-sticky-note me-1"></i>${record.note}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="text-end text-muted small">
+                                    <div>${dateStr}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 匯出CSV
+        function exportToCSV(data, filename, headers) {
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => 
+                    row.map(cell => 
+                        typeof cell === 'string' && (cell.includes(',') || cell.includes('\n')) 
+                            ? `"${cell.replace(/"/g, '""')}"` : cell
+                    ).join(',')
+                )
+            ].join('\n');
+            
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 出庫數量驗證
+        function validateOutQuantity() {
+            const nameInput = document.getElementById('out_name');
+            const qtyInput = document.getElementById('out_qty');
+            const warningDiv = document.getElementById('stockWarning');
+            
+            const materialName = nameInput.value.trim();
+            const requestedQty = parseInt(qtyInput.value) || 0;
+            
+            if (!materialName || !requestedQty) {
+                warningDiv.classList.add('d-none');
+                return;
+            }
+            
+            // 尋找對應的庫存物品
+            const stockItem = inventoryData.slice(1).find(row => 
+                row && row[0] && row[0].toString().toLowerCase() === materialName.toLowerCase()
+            );
+            
+            if (stockItem) {
+                const availableQty = parseInt(stockItem[1]) || 0;
+                
+                if (requestedQty > availableQty) {
+                    warningDiv.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        庫存不足：目前僅有 ${availableQty} 件
+                    `;
+                    warningDiv.classList.remove('d-none');
+                } else {
+                    warningDiv.classList.add('d-none');
+                }
+            } else {
+                warningDiv.classList.add('d-none');
+            }
+        }
+        
+        // 入庫功能
+        async function addStock() {
+            const name = document.getElementById('in_name').value.trim();
+            const qty = document.getElementById('in_qty').value.trim();
+            const warehouse = document.getElementById('in_warehouse').value.trim();
+            const locationSpot = document.getElementById('in_locationSpot').value.trim();
+            const location = document.getElementById('in_location').value.trim();
+            const sn = document.getElementById('in_sn').value.trim();
+            const note = document.getElementById('in_note').value.trim();
+            const threshold = document.getElementById('in_threshold').value.trim() || '5';
+            
+            if (!name || !qty) {
+                alert('物料名稱與數量為必填項目');
+                return;
+            }
+            
+            if (parseInt(qty) <= 0) {
+                alert('數量必須大於0');
+                return;
+            }
+            
+            const payload = {
+                action: "add",
+                name, qty, warehouse, locationSpot, location, sn, note, threshold
+            };
+            
+            try {
+                showLoading();
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 清空表單
+                    ['in_name', 'in_qty', 'in_warehouse', 'in_locationSpot', 'in_location', 'in_sn', 'in_note', 'in_threshold']
+                        .forEach(id => document.getElementById(id).value = '');
+                    
+                    // 重新載入資料
+                    await loadInventoryData();
+                    alert('入庫成功！');
+                } else {
+                    alert('入庫失敗：' + (result.message || '未知錯誤'));
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('入庫失敗:', error);
+                alert('入庫失敗，請稍後再試');
+                hideLoading();
+            }
+        }
+        
+        // 出庫功能
+        async function removeStock() {
+            const name = document.getElementById('out_name').value.trim();
+            const qty = document.getElementById('out_qty').value.trim();
+            const warehouse = document.getElementById('out_warehouse').value.trim();
+            const locationSpot = document.getElementById('out_locationSpot').value.trim();
+            const location = document.getElementById('out_location').value.trim();
+            const sn = document.getElementById('out_sn').value.trim();
+            
+            if (!name || !qty) {
+                alert('物料名稱與數量為必填項目');
+                return;
+            }
+            
+            if (parseInt(qty) <= 0) {
+                alert('數量必須大於0');
+                return;
+            }
+            
+            // 檢查庫存是否足夠
+            const stockItem = inventoryData.slice(1).find(row => 
+                row && row[0] && row[0].toString().toLowerCase() === name.toLowerCase()
+            );
+            
+            if (stockItem) {
+                const availableQty = parseInt(stockItem[1]) || 0;
+                const requestedQty = parseInt(qty);
+                
+                if (requestedQty > availableQty) {
+                    const confirmOut = confirm(
+                        `警告：庫存不足！\n` +
+                        `要出庫的數量：${requestedQty} 件\n` +
+                        `目前庫存：${availableQty} 件\n\n` +
+                        `確定要繼續出庫嗎？`
+                    );
+                    if (!confirmOut) return;
+                }
+            }
+            
+            const payload = {
+                action: "delete",
+                name, qty, warehouse, locationSpot, location, sn
+            };
+            
+            try {
+                showLoading();
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 清空表單
+                    ['out_name', 'out_qty', 'out_warehouse', 'out_locationSpot', 'out_location', 'out_sn']
+                        .forEach(id => document.getElementById(id).value = '');
+                    
+                    // 隱藏警告
+                    document.getElementById('stockWarning').classList.add('d-none');
+                    
+                    // 重新載入資料
+                    await loadInventoryData();
+                    alert('出庫成功！');
+                } else {
+                    alert('出庫失敗：' + (result.message || '未知錯誤'));
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('出庫失敗:', error);
+                alert('出庫失敗，請稍後再試');
+                hideLoading();
+            }
+        }
+        
+        // 事件綁定
+        document.addEventListener('DOMContentLoaded', function() {
+            // 入庫按鈕
+            document.getElementById('inBtn').addEventListener('click', addStock);
+            
+            // 出庫按鈕
+            document.getElementById('outBtn').addEventListener('click', removeStock);
+            
+            // 搜尋按鈕
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            
+            // 匯出按鈕
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+                const warehouse = document.getElementById('searchWarehouse').value;
+                const location = document.getElementById('searchLocation').value;
+                
+                if (!inventoryData || inventoryData.length <= 1) {
+                    alert('無資料可匯出');
+                    return;
+                }
+                
+                let results = inventoryData.slice(1);
+                
+                if (keyword || warehouse || location) {
+                    results = results.filter(row => {
+                        if (!row || row.length < 7) return false;
+                        
+                        const matchKeyword = !keyword || 
+                            (row[0] || '').toString().toLowerCase().includes(keyword) ||
+                            (row[5] || '').toString().toLowerCase().includes(keyword);
+                        const matchWarehouse = !warehouse || (row[2] || '').trim() === warehouse;
+                        const matchLocation = !location || (row[3] || '').trim() === location;
+                        
+                        return matchKeyword && matchWarehouse && matchLocation;
+                    });
+                }
+                
+                if (results.length === 0) {
+                    alert('無符合條件的資料可匯出');
+                    return;
+                }
+                
+                const headers = ['物料名稱', '數量', '倉庫', '地點', '位置', '序號', '備註', '警戒值', '更新時間'];
+                const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+                exportToCSV(results, `庫存查詢結果_${timestamp}.csv`, headers);
+            });
+            
+            // 出庫數量輸入時驗證
+            document.getElementById('out_qty').addEventListener('input', validateOutQuantity);
+            document.getElementById('out_name').addEventListener('input', validateOutQuantity);
+            
+            // 搜尋輸入框即時搜尋
+            document.getElementById('searchKeyword').addEventListener('input', performSearch);
+            document.getElementById('searchWarehouse').addEventListener('change', performSearch);
+            document.getElementById('searchLocation').addEventListener('change', performSearch);
+            
+            // 歷史記錄搜尋
+            document.getElementById('historySearchBtn').addEventListener('click', renderHistoryList);
+            document.getElementById('historySearch').addEventListener('input', renderHistoryList);
+            document.getElementById('historyAction').addEventListener('change', renderHistoryList);
+            document.getElementById('historyDateStart').addEventListener('change', renderHistoryList);
+            document.getElementById('historyDateEnd').addEventListener('change', renderHistoryList);
+            
+            // 標籤切換時載入對應資料
+            document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
+                if (historyData.length === 0) {
+                    loadHistoryData();
+                }
+            });
+            
+            // 初始載入
+            loadInventoryData();
+        });
+    </script>
 </body>
 </html>
