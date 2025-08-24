@@ -591,7 +591,7 @@ class SmartSuggestion {
           <span class="suggestion-stock">${item.qty}件</span>
            ${item.warehouse} · ${item.locationSpot} · ${item.location}
         </div>
-        ${item.serialNumber ? `<div class="suggestion-location"序號: ${item.serialNumber}</div>` : ''}
+        ${item.serialNumber ? `<div class="suggestion-location">序號: ${item.serialNumber}</div>` : ''}
       </div>
     `).join('');
 
@@ -875,7 +875,7 @@ function renderFilters(){
   Array.from(spotSet).sort().forEach(s=> spotSel.innerHTML += `<option value="${s}">${s}</option>`);
   Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
   
-  console.log('ç¯©é¸å™¨é¸é …:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)}); // 除錯用
+  console.log('篩選器選項:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)}); // 除錯用
 
 // 渲染歷史紀錄篩選器
 function renderHistoryFilters(){
@@ -1713,6 +1713,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
