@@ -1340,6 +1340,7 @@ function addHistoryRecord(action, name, qty, warehouse, locationSpot, location, 
   }
 }
 
+// 入庫（改為 POST）
 document.getElementById('inBtn').onclick = async () => {
   const payload = {
     action: "add",
@@ -1359,8 +1360,11 @@ document.getElementById('inBtn').onclick = async () => {
   }
   
   try {
-    const query = new URLSearchParams(payload).toString();
-    const res = await fetch(`${API_URL}?${query}`);
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
     const result = await res.json();
     
     if (result.status === "error") {
@@ -1375,6 +1379,7 @@ document.getElementById('inBtn').onclick = async () => {
     smartSuggestion.hideSuggestions();
     
     await loadData();
+    await loadHistoryData(); // 新增：立即重新載入歷史紀錄
     alert("入庫成功！");
   } catch (e) {
     console.error("入庫失敗:", e);
@@ -1412,8 +1417,11 @@ document.getElementById('outBtn').onclick = async () => {
   }
   
   try {
-    const query = new URLSearchParams(payload).toString();
-    const res = await fetch(`${API_URL}?${query}`);
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
     const result = await res.json();
     
     if (result.status === "error") {
@@ -1438,6 +1446,7 @@ document.getElementById('outBtn').onclick = async () => {
     hideStockWarning();
     
     await loadData();
+    await loadHistoryData(); // 新增：立即重新載入歷史紀錄
     alert("出庫成功！");
   } catch (e) {
     console.error("出庫失敗:", e);
@@ -1609,3 +1618,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
