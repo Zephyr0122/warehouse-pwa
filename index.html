@@ -606,30 +606,42 @@ function syncUrls(sourceId) {
   }
 }
 
-// 為所有URL輸入框添加同步功能
+// 自動填入相同的URL到所有測試框
+function syncUrls(sourceId) {
+  const sourceUrl = document.getElementById(sourceId).value;
+  for (let i = 1; i <= 4; i++) {
+    if (`apiUrl${i}` !== sourceId) {
+      document.getElementById(`apiUrl${i}`).value = sourceUrl;
+    }
+  }
+}
+
+// 預設填入原始URL並設置事件監聽器
+const defaultUrl = "https://script.google.com/macros/s/AKfycbzNbybTy_0vFGLR0hSeFW7FlXGbv44ho1P_xPMv6aE6WBRZuVOpTYXlGvElkdE4Veo/exec";
+
+// 初始化URL輸入框
 for (let i = 1; i <= 4; i++) {
-  document.getElementById(`apiUrl${i}`).addEventListener('input', function() {
+  const urlInput = document.getElementById(`apiUrl${i}`);
+  urlInput.value = defaultUrl;
+  
+  // 添加輸入事件監聽器
+  urlInput.addEventListener('input', function() {
     syncUrls(this.id);
   });
 }
 
-// 頁面載入完成後的初始化
-document.addEventListener('DOMContentLoaded', function() {
-  // 預設填入原始URL
-  const defaultUrl = "https://script.google.com/macros/s/AKfycbzNbybTy_0vFGLR0hSeFW7FlXGbv44ho1P_xPMv6aE6WBRZuVOpTYXlGvElkdE4Veo/exec";
-  
-  for (let i = 1; i <= 4; i++) {
-    document.getElementById(`apiUrl${i}`).value = defaultUrl;
-  }
-  
-  // 顯示使用提示
+// 顯示使用指南
+setTimeout(function() {
   showStatus(`
     <div>
       <strong>📌 使用指南：</strong><br>
       1️⃣ 所有URL框已自動填入，也可貼上新的URL<br>
       2️⃣ 依序點擊各方案的測試按鈕<br>
       3️⃣ 查看哪個方案顯示綠色✅成功<br>
-      4️⃣ 使用成功方案進行功能測試
+      4️⃣ 使用成功方案進行功能測試<br>
+      <button onclick="runAllTests()" class="btn btn-sm btn-primary mt-2">
+        <i class="fas fa-rocket"></i> 一鍵測試所有方案
+      </button>
     </div>
   `, 'info');
-});
+}, 1000);
