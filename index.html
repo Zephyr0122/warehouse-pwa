@@ -876,7 +876,7 @@ function renderFilters(){
   Array.from(locSet).sort().forEach(l=> locSel.innerHTML += `<option value="${l}">${l}</option>`);
   
   console.log('篩選器選項:', {warehouse: Array.from(whSet), spot: Array.from(spotSet), location: Array.from(locSet)}); // 除錯用
-
+}
 // 渲染歷史紀錄篩選器
 function renderHistoryFilters(){
   const whSet = new Set();
@@ -1024,7 +1024,7 @@ function renderSearchResultsPage(){
   
   // 更新分頁資訊
   document.getElementById('searchPageInfo').textContent = 
-    `ç¬¬ ${currentSearchPage} é ï¼Œå…± ${totalPages} é  (ç¸½è¨ˆ ${searchResults.length} ç­†)`;
+    `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)`;
   document.getElementById('searchPrevPageBtn').disabled = currentSearchPage <= 1;
   document.getElementById('searchNextPageBtn').disabled = currentSearchPage >= totalPages;
 }
@@ -1713,9 +1713,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
