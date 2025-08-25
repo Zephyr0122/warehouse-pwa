@@ -812,7 +812,7 @@ function renderSearchResultsPage() {
 
 document.getElementById('inBtn').onclick = async () => {
   const payload = {
-    action: 'in',
+    action: 'add',
     name: document.getElementById('in_name').value.trim(),
     qty: parseInt(document.getElementById('in_qty').value) || 0,
     threshold: parseInt(document.getElementById('in_threshold').value) || 5,
@@ -856,7 +856,7 @@ document.getElementById('inBtn').onclick = async () => {
 
 document.getElementById('outBtn').onclick = async () => {
   const payload = {
-    action: 'out',
+    action: 'delete',
     name: document.getElementById('out_name').value.trim(),
     qty: parseInt(document.getElementById('out_qty').value) || 0,
     wh: document.getElementById('out_wh').value.trim(),
