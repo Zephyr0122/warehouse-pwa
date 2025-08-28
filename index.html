@@ -306,7 +306,37 @@
         </div>
       </div>
     </div>
+    <!-- 新增：所有庫存表格 -->
+    <div class="card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5><i class="fas fa-boxes text-primary"></i> 所有庫存</h5>
+          <button id="exportAllStockBtn" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> 匯出所有庫存
+          </button>
+        </div>
+        <div class="scroll-table">
+          <table class="table table-sm table-striped">
+            <thead class="table-primary">
+              <tr>
+                <th>名稱</th><th>數量</th><th>倉庫</th><th>地點</th><th>位置</th><th>序號</th><th>備註</th>
+              </tr>
+            </thead>
+            <tbody id="allStockTable"></tbody>
+          </table>
+        </div>
+        <div class="pagination-controls">
+          <button id="allStockPrevPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            <i class="fas fa-chevron-left"></i> 上一頁
+          </button>
+          <span id="allStockPageInfo" class="page-info">第 1 頁，共 1 頁</span>
+          <button id="allStockNextPageBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            下一頁 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
 
+  
     <div class="tab-pane fade" id="history" role="tabpanel">
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -394,7 +424,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyfDw8IqV2PGEJEoTGxLacZardt5vwAUA95N_tlJfgNy5typ3jqh5ykD7FjR9q7LS4UPA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw-Bdj6jjALlnHD94-oX1BKUZdbgds2GKa7PLxW-PN70S-qykf1tyV1moFw44HhAUHdYQ/exec";
 const COLS = {
   id: 'id',
   name: 'name',
@@ -415,9 +445,11 @@ let searchResults = [];
 let currentPage = 1;
 let currentHistoryPage = 1;
 let currentSearchPage = 1;
+let currentAllStockPage = 1; // 新增：所有庫存分頁
 const itemsPerPage = 5;
 const historyItemsPerPage = 10;
 const searchItemsPerPage = 10;
+const allStockItemsPerPage = 10; // 新增：每頁顯示 10 筆
 
 class SmartSuggestion {
   constructor() {
@@ -669,7 +701,36 @@ class SmartSuggestion {
 
 const smartSuggestion = new SmartSuggestion();
 smartSuggestion.init();
+  
+// 新增：所有庫存表格渲染函數
+function renderAllStock() {
+  const totalPages = Math.ceil(rawData.length / allStockItemsPerPage);
+  const startIndex = (currentAllStockPage - 1) * allStockItemsPerPage;
+  const endIndex = startIndex + allStockItemsPerPage;
+  const pageData = rawData.slice(startIndex, endIndex);
+  const tbody = document.getElementById('allStockTable');
+  if (pageData.length > 0) {
+    tbody.innerHTML = pageData.map(r => `
+      <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
+        <td>${r[COLS.name] || '-'}</td>
+        <td>${r[COLS.qty] || 0}</td>
+        <td>${r[COLS.wh] || '-'}</td>
+        <td>${r[COLS.spot] || '-'}</td>
+        <td>${r[COLS.loc] || '-'}</td>
+        <td><small>${r[COLS.sn] || '-'}</small></td>
+        <td><small>${r[COLS.note] || '-'}</small></td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">無庫存資料</td></tr>';
+  }
+  document.getElementById('allStockPageInfo').textContent = totalPages > 0 ? `第 ${currentAllStockPage} 頁，共 ${totalPages} 頁 (總計 ${rawData.length} 筆)` : '無資料';
+  document.getElementById('allStockPrevPageBtn').disabled = currentAllStockPage <= 1;
+  document.getElementById('allStockNextPageBtn').disabled = currentAllStockPage >= totalPages;
+}
 
+  
+// 更新：loadData 函數，加入 renderAllStock 調用
 async function loadData() {
   try {
     const res = await fetch(API_URL + "?action=getData");
@@ -683,6 +744,7 @@ async function loadData() {
     updateLowStockData();
     renderLowStock();
     renderSearchResults();
+    renderAllStock(); // 新增：渲染所有庫存表格
   } catch (e) {
     console.error("讀取失敗:", e);
     alert("讀取資料失敗，請檢查網路連線或API設定：" + e.message);
@@ -690,9 +752,9 @@ async function loadData() {
     renderFilters();
     renderLowStock();
     renderSearchResults();
+    renderAllStock(); // 新增：即使載入失敗也渲染空表格
   }
 }
-
 function renderFilters() {
   const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   rawData.forEach(r => {
@@ -868,10 +930,41 @@ document.getElementById('outBtn').onclick = async () => {
     alert('請輸入物料名稱和數量！');
     return;
   }
-  const stockItem = rawData.find(r => r[COLS.name] === payload.name);
-  if (stockItem && parseInt(stockItem[COLS.qty]) < payload.qty) {
-    alert('庫存不足！');
+  // 將輸入的序號拆分為陣列
+  const inputSerialNumbers = payload.sn ? payload.sn.split(',').map(s => s.trim().toLowerCase()) : [];
+  // 如果有輸入序號，檢查數量是否等於序號數量
+  if (inputSerialNumbers.length > 0 && inputSerialNumbers.length !== payload.qty) {
+    alert(`出庫數量 (${payload.qty}) 必須等於序號數量 (${inputSerialNumbers.length})！`);
     return;
+  }
+  // 檢查項目是否存在
+  const stockItem = rawData.find(r => 
+    r[COLS.name].toLowerCase() === payload.name.toLowerCase() &&
+    (!payload.wh || r[COLS.wh].toLowerCase() === payload.wh.toLowerCase()) &&
+    (!payload.spot || r[COLS.spot].toLowerCase() === payload.spot.toLowerCase()) &&
+    (!payload.loc || r[COLS.loc].toLowerCase() === payload.loc.toLowerCase())
+  );
+  if (!stockItem) {
+    alert('找不到指定的物料項目！請檢查名稱、倉庫、地點或位置。');
+    return;
+  }
+  // 檢查庫存數量
+  if (parseInt(stockItem[COLS.qty]) < payload.qty) {
+    alert(`庫存不足！目前庫存：${stockItem[COLS.qty]}，欲出庫：${payload.qty}`);
+    return;
+  }
+  // 檢查序號（如果提供）
+  if (inputSerialNumbers.length > 0) {
+    const serialNumbers = stockItem[COLS.sn] ? stockItem[COLS.sn].split(',').map(s => s.trim().toLowerCase()) : [];
+    if (inputSerialNumbers.some(sn => !serialNumbers.includes(sn))) {
+      alert(`輸入的序號 ${inputSerialNumbers.join(', ')} 中有無效序號！`);
+      return;
+    }
+  } else if (stockItem[COLS.sn]) {
+    // 如果項目有序號但未輸入序號，提示確認
+    if (!confirm(`該物料有序號 (${stockItem[COLS.sn]})，是否確認不指定序號出庫？`)) {
+      return;
+    }
   }
   try {
     const res = await fetch(API_URL, {
@@ -883,7 +976,7 @@ document.getElementById('outBtn').onclick = async () => {
     const result = await res.json();
     if (result.status === 'success') {
       alert('出庫成功！');
-      loadData();
+      loadData(); // 重新載入資料，更新所有表格
       document.getElementById('out_name').value = '';
       document.getElementById('out_qty').value = '';
       document.getElementById('out_wh').value = '';
@@ -898,7 +991,41 @@ document.getElementById('outBtn').onclick = async () => {
     alert('出庫失敗，請檢查網路或API設定: ' + e.message);
   }
 };
+  
+// 新增：所有庫存分頁事件
+document.getElementById('allStockPrevPageBtn').onclick = () => {
+  if (currentAllStockPage > 1) {
+    currentAllStockPage--;
+    renderAllStock();
+  }
+};
+document.getElementById('allStockNextPageBtn').onclick = () => {
+  if (currentAllStockPage < Math.ceil(rawData.length / allStockItemsPerPage)) {
+    currentAllStockPage++;
+    renderAllStock();
+  }
+};
 
+// 新增：匯出所有庫存 CSV
+document.getElementById('exportAllStockBtn').onclick = () => {
+  if (rawData.length === 0) {
+    alert('無庫存資料可匯出！');
+    return;
+  }
+  const csvContent = [
+    '"名稱","數量","倉庫","地點","位置","序號","備註"',
+    ...rawData.map(r => `"${r[COLS.name] || ''}","${r[COLS.qty] || 0}","${r[COLS.wh] || ''}","${r[COLS.spot] || ''}","${r[COLS.loc] || ''}","${r[COLS.sn] || ''}","${r[COLS.note] || ''}"`)
+  ].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `所有庫存_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+  
 document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
