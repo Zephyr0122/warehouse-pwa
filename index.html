@@ -328,17 +328,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw-Bdj6jjALlnHD94-oX1BKUZdbgds2GKa7PLxW-PN70S-qykf1tyV1moFw44HhAUHdYQ/exec";
-const COLS = {
-  id: 'id',
-  name: 'name',
-  qty: 'quantity',
-  wh: 'warehouse',
-  spot: 'locationSpot',
-  loc: 'location',
-  sn: 'serialNumber',
-  note: 'note',
-  th: 'threshold',
-  date: 'lastUpdated'
+const API_FIELDS = {
+  inventory: {
+    id: 'id',
+    name: 'name',
+    quantity: 'quantity',
+    warehouse: 'warehouse',
+    locationSpot: 'locationSpot',
+    location: 'location',
+    serialNumber: 'serialNumber',
+    note: 'note',
+    threshold: 'threshold',
+    lastUpdated: 'lastUpdated'
+  },
+  history: {
+    date: 'date',
+    action: 'action',
+    name: 'name',
+    quantity: 'quantity',
+    warehouse: 'warehouse',
+    locationSpot: 'locationSpot',
+    location: 'location',
+    serialNumber: 'serialNumber',
+    note: 'note',
+    threshold: 'threshold'
+  }
 };
 let rawData = [];
 let historyData = [];
@@ -353,6 +367,16 @@ const itemsPerPage = 5;
 const historyItemsPerPage = 10;
 const searchItemsPerPage = 10;
 const allStockItemsPerPage = 10;
+
+function processSerialNumbers(serialNumber) {
+  return serialNumber ? serialNumber.split(',').map(s => s.trim()).filter(s => s) : [];
+}
+
+function handleApiError(error, defaultMessage) {
+  const message = error.message || defaultMessage;
+  const detail = error.detail ? `\n詳細: ${error.detail}` : '';
+  alert(`${message}${detail}`);
+}
 
 class SmartSuggestion {
   constructor() {
@@ -393,9 +417,9 @@ class SmartSuggestion {
     const normalizedKeyword = keyword.trim();
     const suggestions = [];
     rawData.forEach(row => {
-      if (!row || typeof row !== 'object' || !row[COLS.name]) return;
-      const name = (row[COLS.name] || '').toString();
-      const sn = (row[COLS.sn] || '').toString();
+      if (!row || typeof row !== 'object' || !row[API_FIELDS.inventory.name]) return;
+      const name = (row[API_FIELDS.inventory.name] || '').toString();
+      const sn = (row[API_FIELDS.inventory.serialNumber] || '').toString();
       let score = 0;
       if (name === normalizedKeyword) score = 100;
       else if (name.startsWith(normalizedKeyword)) score = 90;
@@ -406,13 +430,13 @@ class SmartSuggestion {
         suggestions.push({
           score,
           name: name,
-          qty: parseInt(row[COLS.qty]) || 0,
-          warehouse: row[COLS.wh] || '',
-          locationSpot: row[COLS.spot] || '',
-          location: row[COLS.loc] || '',
+          qty: parseInt(row[API_FIELDS.inventory.quantity]) || 0,
+          warehouse: row[API_FIELDS.inventory.warehouse] || '',
+          locationSpot: row[API_FIELDS.inventory.locationSpot] || '',
+          location: row[API_FIELDS.inventory.location] || '',
           serialNumber: sn,
-          note: row[COLS.note] || '',
-          threshold: parseInt(row[COLS.th]) || 5,
+          note: row[API_FIELDS.inventory.note] || '',
+          threshold: parseInt(row[API_FIELDS.inventory.threshold]) || 5,
           data: row
         });
       }
@@ -532,36 +556,21 @@ class SmartSuggestion {
 const smartSuggestion = new SmartSuggestion();
 smartSuggestion.init();
 
-function escapeCsv(value) {
-  if (!value) return '';
-  const str = value.toString().replace(/"/g, '""').replace(/\n/g, ' ');
-  return `"${str}"`;
-}
-
-function renderAllStock() {
-  const totalPages = Math.ceil(rawData.length / allStockItemsPerPage);
-  const startIndex = (currentAllStockPage - 1) * allStockItemsPerPage;
-  const endIndex = startIndex + allStockItemsPerPage;
-  const pageData = rawData.slice(startIndex, endIndex);
-  const tbody = document.getElementById('allStockTable');
-  if (pageData.length > 0) {
-    tbody.innerHTML = pageData.map(r => `
-      <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
-        <td>${r[COLS.name] || '-'}</td>
-        <td>${parseInt(r[COLS.qty]) || 0}</td>
-        <td>${r[COLS.wh] || '-'}</td>
-        <td>${r[COLS.spot] || '-'}</td>
-        <td>${r[COLS.loc] || '-'}</td>
-        <td><small>${r[COLS.sn] || '-'}</small></td>
-        <td><small>${r[COLS.note] || '-'}</small></td>
-      </tr>
-    `).join('');
-  } else {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">無庫存資料</td></tr>';
+async function exportToCsv(type) {
+  try {
+    const res = await fetch(`${API_URL}?action=export&type=${type}`);
+    if (!res.ok) throw new Error(`匯出失敗: ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type === 'inventory' ? '所有庫存' : type === 'history' ? '歷史紀錄' : '低庫存'}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(`匯出 ${type} 失敗:`, e);
+    handleApiError({ message: `匯出 ${type === 'inventory' ? '庫存' : type === 'history' ? '歷史紀錄' : '低庫存'} 失敗，請檢查網路或API設定`, detail: e.message });
   }
-  document.getElementById('allStockPageInfo').textContent = totalPages > 0 ? `第 ${currentAllStockPage} 頁，共 ${totalPages} 頁 (總計 ${rawData.length} 筆)` : '無資料';
-  document.getElementById('allStockPrevPageBtn').disabled = currentAllStockPage <= 1;
-  document.getElementById('allStockNextPageBtn').disabled = currentAllStockPage >= totalPages;
 }
 
 async function loadData() {
@@ -569,16 +578,16 @@ async function loadData() {
     const res = await fetch(API_URL);
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
     const data = await res.json();
-    if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
-    rawData = data.filter(row => row && typeof row === 'object' && row[COLS.name] && !isNaN(parseInt(row[COLS.qty])));
+    if (data.status === 'error') throw new Error(data.message || 'API 返回錯誤');
+    rawData = data.filter(row => row && typeof row === 'object' && row[API_FIELDS.inventory.name] && !isNaN(parseInt(row[API_FIELDS.inventory.quantity])));
     renderFilters();
     updateLowStockData();
     renderLowStock();
     renderSearchResults();
     renderAllStock();
   } catch (e) {
-    console.error("讀取失敗:", e);
-    alert("讀取資料失敗，請檢查網路連線或API設定：" + e.message);
+    console.error('讀取失敗:', e);
+    handleApiError({ message: '讀取資料失敗，請檢查網路或API設定', detail: e.message });
     rawData = [];
     document.getElementById('search').value = '';
     document.getElementById('warehouseFilter').value = '';
@@ -597,15 +606,41 @@ async function loadHistoryData() {
     const res = await fetch(`${API_URL}?action=getHistory`);
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
     const data = await res.json();
-    if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
-    historyData = data.filter(row => row && typeof row === 'object' && row.date && row.action);
+    if (data.status === 'error') throw new Error(data.message || 'API 返回錯誤');
+    historyData = data.filter(row => row && typeof row === 'object' && row[API_FIELDS.history.date] && row[API_FIELDS.history.action]);
     renderHistory();
   } catch (e) {
-    console.error("讀取歷史紀錄失敗:", e);
-    alert("讀取歷史紀錄失敗，請檢查網路連線或API設定：" + e.message);
+    console.error('讀取歷史紀錄失敗:', e);
+    handleApiError({ message: '讀取歷史紀錄失敗，請檢查網路或API設定', detail: e.message });
     historyData = [];
     renderHistory();
   }
+}
+
+function renderAllStock() {
+  const totalPages = Math.ceil(rawData.length / allStockItemsPerPage);
+  const startIndex = (currentAllStockPage - 1) * allStockItemsPerPage;
+  const endIndex = startIndex + allStockItemsPerPage;
+  const pageData = rawData.slice(startIndex, endIndex);
+  const tbody = document.getElementById('allStockTable');
+  if (pageData.length > 0) {
+    tbody.innerHTML = pageData.map(r => `
+      <tr class="${parseInt(r[API_FIELDS.inventory.quantity]) <= parseInt(r[API_FIELDS.inventory.threshold] || 5) ? parseInt(r[API_FIELDS.inventory.quantity]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
+        <td>${r[API_FIELDS.inventory.name] || '-'}</td>
+        <td>${parseInt(r[API_FIELDS.inventory.quantity]) || 0}</td>
+        <td>${r[API_FIELDS.inventory.warehouse] || '-'}</td>
+        <td>${r[API_FIELDS.inventory.locationSpot] || '-'}</td>
+        <td>${r[API_FIELDS.inventory.location] || '-'}</td>
+        <td><small>${r[API_FIELDS.inventory.serialNumber] || '-'}</small></td>
+        <td><small>${r[API_FIELDS.inventory.note] || '-'}</small></td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">無庫存資料</td></tr>';
+  }
+  document.getElementById('allStockPageInfo').textContent = totalPages > 0 ? `第 ${currentAllStockPage} 頁，共 ${totalPages} 頁 (總計 ${rawData.length} 筆)` : '無資料';
+  document.getElementById('allStockPrevPageBtn').disabled = currentAllStockPage <= 1;
+  document.getElementById('allStockNextPageBtn').disabled = currentAllStockPage >= totalPages;
 }
 
 function renderHistory() {
@@ -616,11 +651,11 @@ function renderHistory() {
   const wh = document.getElementById('historyWarehouse').value;
   const spot = document.getElementById('historyLocationSpot').value;
   const filteredData = historyData.filter(row => {
-    const name = (row.name || '').toString();
-    const rowAction = (row.action || '').toString();
-    const rowDate = new Date(row.date).toISOString().split('T')[0];
-    const rowWh = (row.warehouse || '').toString();
-    const rowSpot = (row.locationSpot || '').toString();
+    const name = (row[API_FIELDS.history.name] || '').toString();
+    const rowAction = (row[API_FIELDS.history.action] || '').toString();
+    const rowDate = new Date(row[API_FIELDS.history.date]).toISOString().split('T')[0];
+    const rowWh = (row[API_FIELDS.history.warehouse] || '').toString();
+    const rowSpot = (row[API_FIELDS.history.locationSpot] || '').toString();
     return (!kw || name.includes(kw)) &&
            (!action || rowAction === action) &&
            (!dateStart || rowDate >= dateStart) &&
@@ -635,12 +670,12 @@ function renderHistory() {
   const historyList = document.getElementById('historyList');
   if (pageData.length > 0) {
     historyList.innerHTML = pageData.map(row => `
-      <div class="history-record ${row.action === '入庫' ? 'in' : 'out'}">
-        <div><strong>${row.name || '-'}</strong> (${row.action})</div>
-        <div>數量: ${row.quantity || 0}</div>
-        <div>倉庫: ${row.warehouse || '-'} · 地點: ${row.locationSpot || '-'} · 位置: ${row.location || '-'}</div>
-        ${row.serialNumber ? `<div>序號: ${row.serialNumber}</div>` : ''}
-        <div>時間: ${new Date(row.date).toLocaleString()}</div>
+      <div class="history-record ${row[API_FIELDS.history.action] === '入庫' ? 'in' : 'out'}">
+        <div><strong>${row[API_FIELDS.history.name] || '-'}</strong> (${row[API_FIELDS.history.action]})</div>
+        <div>數量: ${row[API_FIELDS.history.quantity] || 0}</div>
+        <div>倉庫: ${row[API_FIELDS.history.warehouse] || '-'} · 地點: ${row[API_FIELDS.history.locationSpot] || '-'} · 位置: ${row[API_FIELDS.history.location] || '-'}</div>
+        ${row[API_FIELDS.history.serialNumber] ? `<div>序號: ${row[API_FIELDS.history.serialNumber]}</div>` : ''}
+        <div>時間: ${new Date(row[API_FIELDS.history.date]).toLocaleString()}</div>
       </div>
     `).join('');
   } else {
@@ -655,9 +690,9 @@ function renderFilters() {
   const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   rawData.forEach(r => {
     if (r && typeof r === 'object' && Object.keys(r).length > 0) {
-      const wh = r[COLS.wh] ? r[COLS.wh].trim() : '';
-      const spot = r[COLS.spot] ? r[COLS.spot].trim() : '';
-      const loc = r[COLS.loc] ? r[COLS.loc].trim() : '';
+      const wh = r[API_FIELDS.inventory.warehouse] ? r[API_FIELDS.inventory.warehouse].trim() : '';
+      const spot = r[API_FIELDS.inventory.locationSpot] ? r[API_FIELDS.inventory.locationSpot].trim() : '';
+      const loc = r[API_FIELDS.inventory.location] ? r[API_FIELDS.inventory.location].trim() : '';
       if (wh) whSet.add(wh);
       if (spot) spotSet.add(spot);
       if (loc) locSet.add(loc);
@@ -677,9 +712,9 @@ function renderFilters() {
 
 function updateLowStockData() {
   lowStockData = rawData.filter(r => {
-    if (!r || typeof r !== 'object' || !r[COLS.name]) return false;
-    const qty = parseInt(r[COLS.qty]) || 0;
-    const threshold = parseInt(r[COLS.th]) || 5;
+    if (!r || typeof r !== 'object' || !r[API_FIELDS.inventory.name]) return false;
+    const qty = parseInt(r[API_FIELDS.inventory.quantity]) || 0;
+    const threshold = parseInt(r[API_FIELDS.inventory.threshold]) || 5;
     return qty <= threshold;
   });
   currentPage = 1;
@@ -693,13 +728,13 @@ function renderLowStock() {
   const tbody = document.getElementById('lowStockTable');
   if (pageData.length > 0) {
     tbody.innerHTML = pageData.map(r => `
-      <tr class="${parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock'}">
-        <td>${r[COLS.name] || '-'}</td>
-        <td>${parseInt(r[COLS.qty]) || 0}</td>
-        <td>${parseInt(r[COLS.th]) || 5}</td>
-        <td>${r[COLS.wh] || '-'}</td>
-        <td>${r[COLS.spot] || '-'}</td>
-        <td>${r[COLS.loc] || '-'}</td>
+      <tr class="${parseInt(r[API_FIELDS.inventory.quantity]) === 0 ? 'out-of-stock' : 'low-stock'}">
+        <td>${r[API_FIELDS.inventory.name] || '-'}</td>
+        <td>${parseInt(r[API_FIELDS.inventory.quantity]) || 0}</td>
+        <td>${parseInt(r[API_FIELDS.inventory.threshold]) || 5}</td>
+        <td>${r[API_FIELDS.inventory.warehouse] || '-'}</td>
+        <td>${r[API_FIELDS.inventory.locationSpot] || '-'}</td>
+        <td>${r[API_FIELDS.inventory.location] || '-'}</td>
       </tr>
     `).join('');
   } else {
@@ -722,13 +757,13 @@ function renderSearchResults() {
     return;
   }
   searchResults = rawData.filter(r => {
-    if (!r || typeof r !== 'object' || !r[COLS.name]) return false;
-    const name = (r[COLS.name] || '').toString();
-    const sn = (r[COLS.sn] || '').toString();
-    const wh = (r[COLS.wh] || '').toString();
-    const spot = (r[COLS.spot] || '').toString();
-    const loc = (r[COLS.loc] || '').toString();
-    const note = (r[COLS.note] || '').toString();
+    if (!r || typeof r !== 'object' || !r[API_FIELDS.inventory.name]) return false;
+    const name = (r[API_FIELDS.inventory.name] || '').toString();
+    const sn = (r[API_FIELDS.inventory.serialNumber] || '').toString();
+    const wh = (r[API_FIELDS.inventory.warehouse] || '').toString();
+    const spot = (r[API_FIELDS.inventory.locationSpot] || '').toString();
+    const loc = (r[API_FIELDS.inventory.location] || '').toString();
+    const note = (r[API_FIELDS.inventory.note] || '').toString();
     const matchKw = !kw || name.includes(kw) || sn.includes(kw) || wh.includes(kw) || spot.includes(kw) || loc.includes(kw) || note.includes(kw);
     const matchWh = !whF || wh === whF;
     const matchSpot = !spotF || spot === spotF;
@@ -756,14 +791,14 @@ function renderSearchResultsPage() {
   const pageData = searchResults.slice(startIndex, endIndex);
   container.style.display = 'block';
   tbody.innerHTML = pageData.map(r => `
-    <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
-      <td>${r[COLS.name] || '-'}</td>
-      <td>${parseInt(r[COLS.qty]) || 0}</td>
-      <td>${r[COLS.wh] || '-'}</td>
-      <td>${r[COLS.spot] || '-'}</td>
-      <td>${r[COLS.loc] || '-'}</td>
-      <td><small>${r[COLS.sn] || '-'}</small></td>
-      <td><small>${r[COLS.note] || '-'}</small></td>
+    <tr class="${parseInt(r[API_FIELDS.inventory.quantity]) <= parseInt(r[API_FIELDS.inventory.threshold] || 5) ? parseInt(r[API_FIELDS.inventory.quantity]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
+      <td>${r[API_FIELDS.inventory.name] || '-'}</td>
+      <td>${parseInt(r[API_FIELDS.inventory.quantity]) || 0}</td>
+      <td>${r[API_FIELDS.inventory.warehouse] || '-'}</td>
+      <td>${r[API_FIELDS.inventory.locationSpot] || '-'}</td>
+      <td>${r[API_FIELDS.inventory.location] || '-'}</td>
+      <td><small>${r[API_FIELDS.inventory.serialNumber] || '-'}</small></td>
+      <td><small>${r[API_FIELDS.inventory.note] || '-'}</small></td>
     </tr>
   `).join('');
   document.getElementById('searchPageInfo').textContent = `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)`;
@@ -785,7 +820,7 @@ function startBarcodeScanner(targetInputId) {
   }, (err) => {
     if (err) {
       console.error("Quagga 初始化失敗:", err);
-      alert("無法啟動條碼掃描器，請檢查攝影機權限或設備：" + err.message);
+      handleApiError({ message: '無法啟動條碼掃描器，請檢查攝影機權限或設備', detail: err.message });
       stopBarcodeScanner();
       return;
     }
@@ -826,6 +861,11 @@ document.getElementById('inBtn').onclick = async () => {
     alert('請輸入物料名稱和數量！');
     return;
   }
+  const inputSerialNumbers = processSerialNumbers(payload.sn);
+  if (inputSerialNumbers.length > 0 && inputSerialNumbers.length !== payload.qty) {
+    alert(`入庫數量 (${payload.qty}) 必須等於序號數量 (${inputSerialNumbers.length})！`);
+    return;
+  }
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -847,11 +887,11 @@ document.getElementById('inBtn').onclick = async () => {
       document.getElementById('in_sn').value = '';
       document.getElementById('in_note').value = '';
     } else {
-      alert('入庫失敗: ' + result.message);
+      handleApiError(result, '入庫失敗');
     }
   } catch (e) {
     console.error('入庫錯誤:', e);
-    alert('入庫失敗，請檢查網路或API設定: ' + e.message);
+    handleApiError({ message: '入庫失敗，請檢查網路或API設定', detail: e.message });
   }
 };
 
@@ -869,32 +909,32 @@ document.getElementById('outBtn').onclick = async () => {
     alert('請輸入物料名稱和數量！');
     return;
   }
-  const inputSerialNumbers = payload.sn ? payload.sn.split(',').map(s => s.trim()).filter(s => s) : [];
+  const inputSerialNumbers = processSerialNumbers(payload.sn);
   if (inputSerialNumbers.length > 0 && inputSerialNumbers.length !== payload.qty) {
     alert(`出庫數量 (${payload.qty}) 必須等於序號數量 (${inputSerialNumbers.length})！`);
     return;
   }
   const stockItem = rawData.find(r =>
-    r[COLS.name] === payload.name &&
-    (!payload.wh || r[COLS.wh] === payload.wh) &&
-    (!payload.spot || r[COLS.spot] === payload.spot) &&
-    (!payload.loc || r[COLS.loc] === payload.loc)
+    r[API_FIELDS.inventory.name] === payload.name &&
+    (!payload.wh || r[API_FIELDS.inventory.warehouse] === payload.wh) &&
+    (!payload.spot || r[API_FIELDS.inventory.locationSpot] === payload.spot) &&
+    (!payload.loc || r[API_FIELDS.inventory.location] === payload.loc)
   );
   if (!stockItem) {
     alert('找不到指定的物料項目！請檢查名稱、倉庫、地點或位置。');
     return;
   }
-  if (parseInt(stockItem[COLS.qty]) < payload.qty) {
-    alert(`庫存不足！目前庫存：${stockItem[COLS.qty]}，欲出庫：${payload.qty}`);
+  if (parseInt(stockItem[API_FIELDS.inventory.quantity]) < payload.qty) {
+    alert(`庫存不足！目前庫存：${stockItem[API_FIELDS.inventory.quantity]}，欲出庫：${payload.qty}`);
     return;
   }
   if (inputSerialNumbers.length > 0) {
-    const serialNumbers = stockItem[COLS.sn] ? stockItem[COLS.sn].split(',').map(s => s.trim()) : [];
+    const serialNumbers = stockItem[API_FIELDS.inventory.serialNumber] ? processSerialNumbers(stockItem[API_FIELDS.inventory.serialNumber]) : [];
     if (inputSerialNumbers.some(sn => !serialNumbers.includes(sn))) {
       alert(`輸入的序號 ${inputSerialNumbers.join(', ')} 中有無效序號！`);
       return;
     }
-  } else if (stockItem[COLS.sn] && !confirm(`該物料有序號 (${stockItem[COLS.sn]})，不指定序號可能影響追蹤，是否繼續？`)) {
+  } else if (stockItem[API_FIELDS.inventory.serialNumber] && !confirm(`該物料有序號 (${stockItem[API_FIELDS.inventory.serialNumber]})，不指定序號可能影響追蹤，是否繼續？`)) {
     return;
   }
   try {
@@ -916,18 +956,17 @@ document.getElementById('outBtn').onclick = async () => {
       document.getElementById('out_loc').value = '';
       document.getElementById('out_sn').value = '';
     } else {
-      alert('出庫失敗: ' + result.message);
+      handleApiError(result, '出庫失敗');
     }
   } catch (e) {
     console.error('出庫錯誤:', e);
-    alert('出庫失敗，請檢查網路或API設定: ' + e.message);
+    handleApiError({ message: '出庫失敗，請檢查網路或API設定', detail: e.message });
   }
 };
 
 document.getElementById('scanInSnBtn').onclick = () => startBarcodeScanner('in_sn');
 document.getElementById('scanOutSnBtn').onclick = () => startBarcodeScanner('out_sn');
 document.getElementById('closeScannerBtn').onclick = stopBarcodeScanner;
-
 document.getElementById('allStockPrevPageBtn').onclick = () => {
   if (currentAllStockPage > 1) {
     currentAllStockPage--;
@@ -940,43 +979,34 @@ document.getElementById('allStockNextPageBtn').onclick = () => {
     renderAllStock();
   }
 };
-
-document.getElementById('exportAllStockBtn').onclick = () => {
-  if (rawData.length === 0) {
-    alert('無庫存資料可匯出！');
+document.getElementById('exportAllStockBtn').onclick = () => exportToCsv('inventory');
+document.getElementById('exportHistoryBtn').onclick = () => exportToCsv('history');
+document.getElementById('exportLowStockBtn').onclick = () => exportToCsv('lowStock');
+document.getElementById('exportSearchBtn').onclick = () => {
+  if (searchResults.length === 0) {
+    alert('無查詢結果可匯出！');
     return;
   }
   const csvContent = [
     '"名稱","數量","倉庫","地點","位置","序號","備註"',
-    ...rawData.map(r => `${escapeCsv(r[COLS.name])},${parseInt(r[COLS.qty]) || 0},${escapeCsv(r[COLS.wh])},${escapeCsv(r[COLS.spot])},${escapeCsv(r[COLS.loc])},${escapeCsv(r[COLS.sn])},${escapeCsv(r[COLS.note])}`)
+    ...searchResults.map(r => [
+      `"${r[API_FIELDS.inventory.name]}"`,
+      parseInt(r[API_FIELDS.inventory.quantity]) || 0,
+      `"${r[API_FIELDS.inventory.warehouse] || ''}"`,
+      `"${r[API_FIELDS.inventory.locationSpot] || ''}"`,
+      `"${r[API_FIELDS.inventory.location] || ''}"`,
+      `"${r[API_FIELDS.inventory.serialNumber] || ''}"`,
+      `"${r[API_FIELDS.inventory.note] || ''}"`
+    ].join(','))
   ].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `所有庫存_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `查詢結果_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 };
-
-document.getElementById('exportHistoryBtn').onclick = () => {
-  if (historyData.length === 0) {
-    alert('無歷史紀錄可匯出！');
-    return;
-  }
-  const csvContent = [
-    '"物料名稱","動作","數量","倉庫","地點","位置","序號","時間"',
-    ...historyData.map(r => `${escapeCsv(r.name)},${escapeCsv(r.action)},${r.quantity || 0},${escapeCsv(r.warehouse)},${escapeCsv(r.locationSpot)},${escapeCsv(r.location)},${escapeCsv(r.serialNumber)},${escapeCsv(new Date(r.date).toLocaleString())}`)
-  ].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `歷史紀錄_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
 document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
@@ -984,7 +1014,6 @@ document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('locationFilter').value = '';
   loadData();
 };
-
 document.getElementById('historyRefreshBtn').onclick = loadHistoryData;
 document.getElementById('historyClearBtn').onclick = () => {
   document.getElementById('historySearch').value = '';
@@ -995,14 +1024,12 @@ document.getElementById('historyClearBtn').onclick = () => {
   document.getElementById('historyLocationSpot').value = '';
   loadHistoryData();
 };
-
 document.getElementById('prevPageBtn').onclick = () => { if (currentPage > 1) { currentPage--; renderLowStock(); } };
 document.getElementById('nextPageBtn').onclick = () => { if (currentPage < Math.ceil(lowStockData.length / itemsPerPage)) { currentPage++; renderLowStock(); } };
 document.getElementById('searchPrevPageBtn').onclick = () => { if (currentSearchPage > 1) { currentSearchPage--; renderSearchResultsPage(); } };
 document.getElementById('searchNextPageBtn').onclick = () => { if (currentSearchPage < Math.ceil(searchResults.length / searchItemsPerPage)) { currentSearchPage++; renderSearchResultsPage(); } };
 document.getElementById('historyPrevBtn').onclick = () => { if (currentHistoryPage > 1) { currentHistoryPage--; renderHistory(); } };
 document.getElementById('historyNextBtn').onclick = () => { if (currentHistoryPage < Math.ceil(historyData.length / historyItemsPerPage)) { currentHistoryPage++; renderHistory(); } };
-
 document.getElementById('warehouseFilter').onchange = renderSearchResults;
 document.getElementById('locationSpotFilter').onchange = renderSearchResults;
 document.getElementById('locationFilter').onchange = renderSearchResults;
@@ -1013,7 +1040,6 @@ document.getElementById('historyDateStart').onchange = renderHistory;
 document.getElementById('historyDateEnd').onchange = renderHistory;
 document.getElementById('historyWarehouse').onchange = renderHistory;
 document.getElementById('historyLocationSpot').onchange = renderHistory;
-
 loadData();
 loadHistoryData();
 </script>
