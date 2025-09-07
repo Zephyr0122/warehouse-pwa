@@ -13,161 +13,78 @@
   .small-input { padding: .45rem .6rem; font-size: .95rem; }
   .low-stock { background-color: #fff3cd !important; }
   .out-of-stock { background-color: #f8d7da !important; }
-  .scroll-table { max-height: 250px; overflow-y: auto; }
-  
-  /* 智能建議下拉選單樣式 */
+  .scroll-table { max-height: calc(50vh); overflow-y: auto; }
   .suggestion-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 0 0 0.375rem 0.375rem;
-    border-top: none;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: absolute; top: 100%; left: 0; right: 0; background: white;
+    border: 1px solid #dee2e6; border-radius: 0 0 0.375rem 0.375rem; border-top: none;
+    max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: none;
   }
-  
   .suggestion-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    border-bottom: 1px solid #f8f9fa;
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f8f9fa;
     transition: background-color 0.2s;
   }
-  
-  .suggestion-item:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .suggestion-item.active {
-    background-color: #e3f2fd;
-  }
-  
-  .suggestion-item:last-child {
-    border-bottom: none;
-  }
-  
-  .suggestion-name {
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .suggestion-info {
-    font-size: 0.85rem;
-    color: #6c757d;
-    margin-top: 2px;
-  }
-  
-  .suggestion-location {
-    font-size: 0.8rem;
-    color: #28a745;
-    margin-top: 1px;
-  }
-  
-  .suggestion-stock {
-    font-size: 0.8rem;
-    color: #007bff;
-    float: right;
-  }
-  
-  .input-container {
-    position: relative;
-  }
-  
-  .input-container input {
-    border-radius: 0.375rem;
-  }
-  
-  .input-container.has-suggestions input {
-    border-radius: 0.375rem 0.375rem 0 0;
-  }
-  
-  .barcode-scanner { 
+  .suggestion-item:hover { background-color: #f8f9fa; }
+  .suggestion-item.active { background-color: #e3f2fd; }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-name { font-weight: 600; color: #333; }
+  .suggestion-info { font-size: 0.85rem; color: #6c757d; margin-top: 2px; }
+  .suggestion-location { font-size: 0.8rem; color: #28a745; margin-top: 1px; }
+  .suggestion-stock { font-size: 0.8rem; color: #007bff; float: right; }
+  .input-container { position: relative; }
+  .input-container input { border-radius: 0.375rem; }
+  .input-container.has-suggestions input { border-radius: 0.375rem 0.375rem 0 0; }
+  .barcode-scanner {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0,0,0,0.95); z-index: 9999; display: none;
     justify-content: center; align-items: center; flex-direction: column;
   }
-  #video { 
+  #video {
     width: 90%; max-width: 400px; height: auto;
     border: 2px solid #28a745; border-radius: 10px;
     box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
   }
   .scanner-overlay {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 250px; height: 150px;
-    border: 2px solid #28a745;
-    border-radius: 10px;
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 250px; height: 150px; border: 2px solid #28a745; border-radius: 10px;
     pointer-events: none;
   }
   .scanner-corner {
-    position: absolute; width: 20px; height: 20px;
-    border: 3px solid #28a745;
+    position: absolute; width: 20px; height: 20px; border: 3px solid #28a745;
   }
   .scanner-corner.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
   .scanner-corner.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
   .scanner-corner.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
   .scanner-corner.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
-  
   .scanner-info {
     color: white; text-align: center; margin-top: 20px;
     font-size: 1.1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   }
-  
   .search-results { max-height: 300px; overflow-y: auto; }
-  
   .pagination-controls {
-    display: flex; justify-content: center; align-items: center; gap: 10px;
-    margin-top: 10px;
+    display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px;
   }
-  .page-info {
-    font-size: 0.9rem; color: #6c757d;
-    min-width: 120px; text-align: center;
-  }
-  
-  .history-record {
-    border-left: 3px solid #007bff;
-    padding-left: 10px;
-    margin-bottom: 8px;
-  }
-  .history-record.in {
-    border-left-color: #28a745;
-  }
-  .history-record.out {
-    border-left-color: #dc3545;
-  }
-  
+  .page-info { font-size: 0.9rem; color: #6c757d; min-width: 120px; text-align: center; }
+  .history-record { border-left: 3px solid #007bff; padding-left: 10px; margin-bottom: 8px; }
+  .history-record.in { border-left-color: #28a745; }
+  .history-record.out { border-left-color: #dc3545; }
   .export-btn {
-    background: linear-gradient(135deg, #17a2b8, #138496);
-    border: none;
-    color: white;
+    background: linear-gradient(135deg, #17a2b8, #138496); border: none; color: white;
     transition: all 0.3s ease;
   }
   .export-btn:hover {
     background: linear-gradient(135deg, #138496, #117a8b);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   }
-  
-  .nav-tabs .nav-link {
-    border-radius: 8px 8px 0 0;
-    margin-right: 2px;
-  }
+  .nav-tabs .nav-link { border-radius: 8px 8px 0 0; margin-right: 2px; }
   .nav-tabs .nav-link.active {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border-color: #007bff;
-    color: white !important;
+    background: linear-gradient(135deg, #007bff, #0056b3); border-color: #007bff; color: white !important;
   }
 </style>
 </head>
 <body class="bg-light">
 <div class="container py-3">
   <h3 class="text-center mb-3">📦 倉庫物料管理（PWA）</h3>
-
   <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button" role="tab">
@@ -180,37 +97,35 @@
       </button>
     </li>
   </ul>
-
   <div class="tab-content" id="mainTabsContent">
     <div class="tab-pane fade show active" id="management" role="tabpanel">
       <div class="card p-3 mb-3">
         <h5>🔍 查詢</h5>
         <div class="row g-2 mb-3">
-            <div class="col-md-3">
-                <input id="search" class="form-control small-input" placeholder="搜尋物料名稱/序號">
-            </div>
-            <div class="col-md-2">
-                <select id="warehouseFilter" class="form-select small-input">
-                    <option value="">全部倉庫</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="locationSpotFilter" class="form-select small-input">
-                    <option value="">全部地點</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="locationFilter" class="form-select small-input">
-                    <option value="">全部位置</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button id="refreshBtn" class="btn btn-outline-primary big-btn w-100">
-                    <i class="fas fa-sync-alt"></i> 重新整理
-                </button>
-            </div>
+          <div class="col-md-3">
+            <input id="search" class="form-control small-input" placeholder="搜尋物料名稱/序號">
+          </div>
+          <div class="col-md-2">
+            <select id="warehouseFilter" class="form-select small-input">
+              <option value="">全部倉庫</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="locationSpotFilter" class="form-select small-input">
+              <option value="">全部地點</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="locationFilter" class="form-select small-input">
+              <option value="">全部位置</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <button id="refreshBtn" class="btn btn-outline-primary big-btn w-100">
+              <i class="fas fa-sync-alt"></i> 重新整理
+            </button>
+          </div>
         </div>
-        
         <div id="searchResultsContainer" style="display: none;">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h6><i class="fas fa-list text-primary"></i> 查詢結果</h6>
@@ -239,7 +154,6 @@
           </div>
         </div>
       </div>
-
       <div class="card p-3 mb-3">
         <h5>➕ 入庫</h5>
         <div class="input-container mb-2">
@@ -260,7 +174,6 @@
         <input id="in_note" class="form-control small-input mb-2" placeholder="備註">
         <button id="inBtn" class="btn btn-success big-btn w-100">入庫</button>
       </div>
-
       <div class="card p-3 mb-3">
         <h5>➖ 出庫</h5>
         <div class="input-container mb-2">
@@ -277,12 +190,11 @@
         </div>
         <button id="outBtn" class="btn btn-danger big-btn w-100">出庫</button>
       </div>
-
-      <div class="card p-3">
+      <div class="card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5><i class="fas fa-exclamation-triangle text-warning"></i>低庫存告警</h5>
+          <h5><i class="fas fa-exclamation-triangle text-warning"></i> 低庫存告警</h5>
           <button id="exportLowStockBtn" class="btn btn-sm export-btn">
-            <i class="fas fa-download"></i>匯出低庫存清單
+            <i class="fas fa-download"></i> 匯出低庫存清單
           </button>
         </div>
         <div class="scroll-table">
@@ -305,9 +217,7 @@
           </button>
         </div>
       </div>
-    </div>
-    <!-- 新增：所有庫存表格 -->
-    <div class="card p-3 mb-3">
+      <div class="card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5><i class="fas fa-boxes text-primary"></i> 所有庫存</h5>
           <button id="exportAllStockBtn" class="btn btn-sm export-btn">
@@ -335,8 +245,6 @@
         </div>
       </div>
     </div>
-
-  
     <div class="tab-pane fade" id="history" role="tabpanel">
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -345,7 +253,6 @@
             <i class="fas fa-download"></i> 匯出歷史紀錄
           </button>
         </div>
-        
         <div class="row mb-3">
           <div class="col-md-2">
             <input id="historySearch" class="form-control small-input" placeholder="搜尋物料名稱">
@@ -384,12 +291,10 @@
             </button>
           </div>
         </div>
-        
         <div id="historyContainer">
           <div class="scroll-table" style="max-height: 400px;">
             <div id="historyList"></div>
           </div>
-          
           <div class="pagination-controls">
             <button id="historyPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>
               <i class="fas fa-chevron-left"></i> 上一頁
@@ -404,7 +309,6 @@
     </div>
   </div>
 </div>
-
 <div id="barcodeScanner" class="barcode-scanner">
   <video id="video" playsinline></video>
   <div class="scanner-overlay">
@@ -420,7 +324,6 @@
     </button>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script>
@@ -445,11 +348,11 @@ let searchResults = [];
 let currentPage = 1;
 let currentHistoryPage = 1;
 let currentSearchPage = 1;
-let currentAllStockPage = 1; // 新增：所有庫存分頁
+let currentAllStockPage = 1;
 const itemsPerPage = 5;
 const historyItemsPerPage = 10;
 const searchItemsPerPage = 10;
-const allStockItemsPerPage = 10; // 新增：每頁顯示 10 筆
+const allStockItemsPerPage = 10;
 
 class SmartSuggestion {
   constructor() {
@@ -458,77 +361,47 @@ class SmartSuggestion {
     this.selectedIndex = -1;
     this.isVisible = false;
   }
-
   init() {
     this.setupInputListeners('in_name');
     this.setupInputListeners('out_name');
-    
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.input-container')) {
         this.hideSuggestions();
       }
     });
   }
-
   setupInputListeners(inputId) {
     const input = document.getElementById(inputId);
     const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
-    
     if (!input || !suggestionsDiv) return;
-
-    input.addEventListener('input', (e) => {
-      this.handleInput(inputId, e.target.value);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      this.handleKeydown(e, inputId);
-    });
-
+    input.addEventListener('input', (e) => this.handleInput(inputId, e.target.value));
+    input.addEventListener('keydown', (e) => this.handleKeydown(e, inputId));
     input.addEventListener('focus', (e) => {
-      if (e.target.value.trim()) {
-        this.handleInput(inputId, e.target.value);
-      }
+      if (e.target.value.trim()) this.handleInput(inputId, e.target.value);
     });
   }
-
   handleInput(inputId, value) {
     if (!value || value.length < 1) {
       this.hideSuggestions();
       return;
     }
-
     const suggestions = this.findSimilarItems(value);
     this.showSuggestions(inputId, suggestions);
   }
-
   findSimilarItems(keyword) {
     if (!rawData || rawData.length <= 0) return [];
-
-    const normalizedKeyword = keyword.toLowerCase().trim();
+    const normalizedKeyword = keyword.trim();
     const suggestions = [];
-
     rawData.forEach(row => {
       if (!row || typeof row !== 'object' || !row[COLS.name]) return;
-
       const name = (row[COLS.name] || '').toString();
       const sn = (row[COLS.sn] || '').toString();
-      const normalizedName = name.toLowerCase();
-      const normalizedSn = sn.toLowerCase();
-
       let score = 0;
-      
-      if (normalizedName === normalizedKeyword) {
-        score = 100;
-      } else if (normalizedName.startsWith(normalizedKeyword)) {
-        score = 90;
-      } else if (normalizedName.includes(normalizedKeyword)) {
-        score = 70;
-      } else if (normalizedSn.includes(normalizedKeyword)) {
-        score = 60;
-      } else if (this.fuzzyMatch(normalizedName, normalizedKeyword)) {
-        score = 50;
-      }
-
+      if (name === normalizedKeyword) score = 100;
+      else if (name.startsWith(normalizedKeyword)) score = 90;
+      else if (name.includes(normalizedKeyword)) score = 70;
+      else if (sn.includes(normalizedKeyword)) score = 60;
+      else if (this.fuzzyMatch(name, normalizedKeyword)) score = 50;
       if (score > 0) {
         suggestions.push({
           score,
@@ -544,94 +417,66 @@ class SmartSuggestion {
         });
       }
     });
-
     return suggestions.sort((a, b) => b.score - a.score).slice(0, 8);
   }
-
   fuzzyMatch(str1, str2) {
     if (str2.length < 2) return false;
-    
     let matches = 0;
     const minLength = Math.min(str1.length, str2.length);
-    
     for (let i = 0; i < minLength; i++) {
-      if (str1[i] === str2[i]) {
-        matches++;
-      }
+      if (str1[i] === str2[i]) matches++;
     }
-    
     return (matches / str2.length) > 0.6;
   }
-
   showSuggestions(inputId, suggestions) {
     const suggestionsDiv = document.getElementById(`${inputId}_suggestions`);
     const inputContainer = suggestionsDiv.parentElement;
-    
     if (!suggestionsDiv) return;
-
     this.currentInput = inputId;
     this.currentSuggestions = suggestions;
     this.selectedIndex = -1;
     this.isVisible = true;
-
     if (suggestions.length === 0) {
       this.hideSuggestions();
       return;
     }
-
     inputContainer.classList.add('has-suggestions');
-
     suggestionsDiv.innerHTML = suggestions.map((item, index) => `
       <div class="suggestion-item" data-index="${index}">
         <div class="suggestion-name">${this.highlightMatch(item.name, document.getElementById(inputId).value)}</div>
         <div class="suggestion-info">
           <span class="suggestion-stock">${item.qty}件</span>
-           ${item.warehouse} · ${item.locationSpot} · ${item.location}
+          ${item.warehouse} · ${item.locationSpot} · ${item.location}
         </div>
         ${item.serialNumber ? `<div class="suggestion-location">序號: ${item.serialNumber}</div>` : ''}
       </div>
     `).join('');
-
     suggestionsDiv.querySelectorAll('.suggestion-item').forEach((item, index) => {
-      item.addEventListener('click', () => {
-        this.selectSuggestion(index);
-      });
+      item.addEventListener('click', () => this.selectSuggestion(index));
     });
-
     suggestionsDiv.style.display = 'block';
   }
-
   highlightMatch(text, keyword) {
     if (!keyword) return text;
-    
     const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<strong>$1</strong>');
   }
-
   hideSuggestions() {
     if (!this.currentInput) return;
-
     const suggestionsDiv = document.getElementById(`${this.currentInput}_suggestions`);
     const inputContainer = suggestionsDiv?.parentElement;
-    
     if (suggestionsDiv) {
       suggestionsDiv.style.display = 'none';
       suggestionsDiv.innerHTML = '';
     }
-    
-    if (inputContainer) {
-      inputContainer.classList.remove('has-suggestions');
-    }
-
+    if (inputContainer) inputContainer.classList.remove('has-suggestions');
     this.currentInput = null;
     this.currentSuggestions = [];
     this.selectedIndex = -1;
     this.isVisible = false;
   }
-
   handleKeydown(e, inputId) {
     if (!this.isVisible || this.currentInput !== inputId) return;
-
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -643,27 +488,18 @@ class SmartSuggestion {
         break;
       case 'Enter':
         e.preventDefault();
-        if (this.selectedIndex >= 0) {
-          this.selectSuggestion(this.selectedIndex);
-        }
+        if (this.selectedIndex >= 0) this.selectSuggestion(this.selectedIndex);
         break;
       case 'Escape':
         this.hideSuggestions();
         break;
     }
   }
-
   moveSelection(direction) {
     const maxIndex = this.currentSuggestions.length - 1;
-    
     this.selectedIndex += direction;
-    
-    if (this.selectedIndex > maxIndex) {
-      this.selectedIndex = 0;
-    } else if (this.selectedIndex < 0) {
-      this.selectedIndex = maxIndex;
-    }
-
+    if (this.selectedIndex > maxIndex) this.selectedIndex = 0;
+    else if (this.selectedIndex < 0) this.selectedIndex = maxIndex;
     const suggestionsDiv = document.getElementById(`${this.currentInput}_suggestions`);
     if (suggestionsDiv) {
       const items = suggestionsDiv.querySelectorAll('.suggestion-item');
@@ -672,15 +508,11 @@ class SmartSuggestion {
       });
     }
   }
-
   selectSuggestion(index) {
     if (index < 0 || index >= this.currentSuggestions.length) return;
-
     const suggestion = this.currentSuggestions[index];
     const inputType = this.currentInput.split('_')[0];
-
     document.getElementById(this.currentInput).value = suggestion.name;
-
     if (inputType === 'in') {
       document.getElementById('in_wh').value = suggestion.warehouse;
       document.getElementById('in_spot').value = suggestion.locationSpot;
@@ -694,15 +526,18 @@ class SmartSuggestion {
       document.getElementById('out_loc').value = suggestion.location;
       document.getElementById('out_sn').value = suggestion.serialNumber;
     }
-
     this.hideSuggestions();
   }
 }
-
 const smartSuggestion = new SmartSuggestion();
 smartSuggestion.init();
-  
-// 新增：所有庫存表格渲染函數
+
+function escapeCsv(value) {
+  if (!value) return '';
+  const str = value.toString().replace(/"/g, '""').replace(/\n/g, ' ');
+  return `"${str}"`;
+}
+
 function renderAllStock() {
   const totalPages = Math.ceil(rawData.length / allStockItemsPerPage);
   const startIndex = (currentAllStockPage - 1) * allStockItemsPerPage;
@@ -713,7 +548,7 @@ function renderAllStock() {
     tbody.innerHTML = pageData.map(r => `
       <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
         <td>${r[COLS.name] || '-'}</td>
-        <td>${r[COLS.qty] || 0}</td>
+        <td>${parseInt(r[COLS.qty]) || 0}</td>
         <td>${r[COLS.wh] || '-'}</td>
         <td>${r[COLS.spot] || '-'}</td>
         <td>${r[COLS.loc] || '-'}</td>
@@ -729,32 +564,93 @@ function renderAllStock() {
   document.getElementById('allStockNextPageBtn').disabled = currentAllStockPage >= totalPages;
 }
 
-  
-// 更新：loadData 函數，加入 renderAllStock 調用
 async function loadData() {
   try {
-    const res = await fetch(API_URL + "?action=getData");
+    const res = await fetch(API_URL);
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
     const data = await res.json();
-    console.log('API 回應:', data);
     if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
-    rawData = data.filter(row => row && typeof row === 'object' && row[COLS.name]);
-    console.log('載入資料數量:', rawData.length);
+    rawData = data.filter(row => row && typeof row === 'object' && row[COLS.name] && !isNaN(parseInt(row[COLS.qty])));
     renderFilters();
     updateLowStockData();
     renderLowStock();
     renderSearchResults();
-    renderAllStock(); // 新增：渲染所有庫存表格
+    renderAllStock();
   } catch (e) {
     console.error("讀取失敗:", e);
     alert("讀取資料失敗，請檢查網路連線或API設定：" + e.message);
     rawData = [];
+    document.getElementById('search').value = '';
+    document.getElementById('warehouseFilter').value = '';
+    document.getElementById('locationSpotFilter').value = '';
+    document.getElementById('locationFilter').value = '';
     renderFilters();
+    updateLowStockData();
     renderLowStock();
     renderSearchResults();
-    renderAllStock(); // 新增：即使載入失敗也渲染空表格
+    renderAllStock();
   }
 }
+
+async function loadHistoryData() {
+  try {
+    const res = await fetch(`${API_URL}?action=getHistory`);
+    if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
+    const data = await res.json();
+    if (data.status === "error") throw new Error(data.message || "API 返回錯誤");
+    historyData = data.filter(row => row && typeof row === 'object' && row.date && row.action);
+    renderHistory();
+  } catch (e) {
+    console.error("讀取歷史紀錄失敗:", e);
+    alert("讀取歷史紀錄失敗，請檢查網路連線或API設定：" + e.message);
+    historyData = [];
+    renderHistory();
+  }
+}
+
+function renderHistory() {
+  const kw = document.getElementById('historySearch').value.trim();
+  const action = document.getElementById('historyAction').value;
+  const dateStart = document.getElementById('historyDateStart').value;
+  const dateEnd = document.getElementById('historyDateEnd').value;
+  const wh = document.getElementById('historyWarehouse').value;
+  const spot = document.getElementById('historyLocationSpot').value;
+  const filteredData = historyData.filter(row => {
+    const name = (row.name || '').toString();
+    const rowAction = (row.action || '').toString();
+    const rowDate = new Date(row.date).toISOString().split('T')[0];
+    const rowWh = (row.warehouse || '').toString();
+    const rowSpot = (row.locationSpot || '').toString();
+    return (!kw || name.includes(kw)) &&
+           (!action || rowAction === action) &&
+           (!dateStart || rowDate >= dateStart) &&
+           (!dateEnd || rowDate <= dateEnd) &&
+           (!wh || rowWh === wh) &&
+           (!spot || rowSpot === spot);
+  });
+  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
+  const endIndex = startIndex + historyItemsPerPage;
+  const pageData = filteredData.slice(startIndex, endIndex);
+  const historyList = document.getElementById('historyList');
+  if (pageData.length > 0) {
+    historyList.innerHTML = pageData.map(row => `
+      <div class="history-record ${row.action === '入庫' ? 'in' : 'out'}">
+        <div><strong>${row.name || '-'}</strong> (${row.action})</div>
+        <div>數量: ${row.quantity || 0}</div>
+        <div>倉庫: ${row.warehouse || '-'} · 地點: ${row.locationSpot || '-'} · 位置: ${row.location || '-'}</div>
+        ${row.serialNumber ? `<div>序號: ${row.serialNumber}</div>` : ''}
+        <div>時間: ${new Date(row.date).toLocaleString()}</div>
+      </div>
+    `).join('');
+  } else {
+    historyList.innerHTML = '<div class="text-center text-muted">無歷史紀錄</div>';
+  }
+  document.getElementById('historyPageInfo').textContent = totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
+  document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
+  document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
+}
+
 function renderFilters() {
   const whSet = new Set(), locSet = new Set(), spotSet = new Set();
   rawData.forEach(r => {
@@ -770,9 +666,13 @@ function renderFilters() {
   const whSel = document.getElementById('warehouseFilter');
   const spotSel = document.getElementById('locationSpotFilter');
   const locSel = document.getElementById('locationFilter');
+  const historyWhSel = document.getElementById('historyWarehouse');
+  const historySpotSel = document.getElementById('historyLocationSpot');
   whSel.innerHTML = '<option value="">全部倉庫</option>' + Array.from(whSet).sort().map(w => `<option value="${w}">${w}</option>`).join('');
   spotSel.innerHTML = '<option value="">全部地點</option>' + Array.from(spotSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
   locSel.innerHTML = '<option value="">全部位置</option>' + Array.from(locSet).sort().map(l => `<option value="${l}">${l}</option>`).join('');
+  historyWhSel.innerHTML = '<option value="">全部倉庫</option>' + Array.from(whSet).sort().map(w => `<option value="${w}">${w}</option>`).join('');
+  historySpotSel.innerHTML = '<option value="">全部地點</option>' + Array.from(spotSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
 }
 
 function updateLowStockData() {
@@ -795,8 +695,8 @@ function renderLowStock() {
     tbody.innerHTML = pageData.map(r => `
       <tr class="${parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock'}">
         <td>${r[COLS.name] || '-'}</td>
-        <td>${r[COLS.qty] || 0}</td>
-        <td>${r[COLS.th] || 5}</td>
+        <td>${parseInt(r[COLS.qty]) || 0}</td>
+        <td>${parseInt(r[COLS.th]) || 5}</td>
         <td>${r[COLS.wh] || '-'}</td>
         <td>${r[COLS.spot] || '-'}</td>
         <td>${r[COLS.loc] || '-'}</td>
@@ -811,7 +711,7 @@ function renderLowStock() {
 }
 
 function renderSearchResults() {
-  const kw = document.getElementById('search').value.trim().toLowerCase();
+  const kw = document.getElementById('search').value.trim();
   const whF = document.getElementById('warehouseFilter').value.trim();
   const spotF = document.getElementById('locationSpotFilter').value.trim();
   const locF = document.getElementById('locationFilter').value.trim();
@@ -823,19 +723,18 @@ function renderSearchResults() {
   }
   searchResults = rawData.filter(r => {
     if (!r || typeof r !== 'object' || !r[COLS.name]) return false;
-    const name = (r[COLS.name] || '').toString().toLowerCase();
-    const sn = (r[COLS.sn] || '').toString().toLowerCase();
-    const wh = (r[COLS.wh] || '').toString().toLowerCase();
-    const spot = (r[COLS.spot] || '').toString().toLowerCase();
-    const loc = (r[COLS.loc] || '').toString().toLowerCase();
-    const note = (r[COLS.note] || '').toString().toLowerCase();
+    const name = (r[COLS.name] || '').toString();
+    const sn = (r[COLS.sn] || '').toString();
+    const wh = (r[COLS.wh] || '').toString();
+    const spot = (r[COLS.spot] || '').toString();
+    const loc = (r[COLS.loc] || '').toString();
+    const note = (r[COLS.note] || '').toString();
     const matchKw = !kw || name.includes(kw) || sn.includes(kw) || wh.includes(kw) || spot.includes(kw) || loc.includes(kw) || note.includes(kw);
-    const matchWh = !whF || wh === whF.toLowerCase();
-    const matchSpot = !spotF || spot === spotF.toLowerCase();
-    const matchLoc = !locF || loc === locF.toLowerCase();
+    const matchWh = !whF || wh === whF;
+    const matchSpot = !spotF || spot === spotF;
+    const matchLoc = !locF || loc === locF;
     return matchKw && matchWh && matchSpot && matchLoc;
   });
-  console.log('搜尋結果:', searchResults); // 調試用，檢查篩選結果
   currentSearchPage = 1;
   renderSearchResultsPage();
 }
@@ -857,9 +756,9 @@ function renderSearchResultsPage() {
   const pageData = searchResults.slice(startIndex, endIndex);
   container.style.display = 'block';
   tbody.innerHTML = pageData.map(r => `
-    <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? 'low-stock' : ''}">
+    <tr class="${parseInt(r[COLS.qty]) <= parseInt(r[COLS.th] || 5) ? parseInt(r[COLS.qty]) === 0 ? 'out-of-stock' : 'low-stock' : ''}">
       <td>${r[COLS.name] || '-'}</td>
-      <td>${r[COLS.qty] || 0}</td>
+      <td>${parseInt(r[COLS.qty]) || 0}</td>
       <td>${r[COLS.wh] || '-'}</td>
       <td>${r[COLS.spot] || '-'}</td>
       <td>${r[COLS.loc] || '-'}</td>
@@ -870,6 +769,45 @@ function renderSearchResultsPage() {
   document.getElementById('searchPageInfo').textContent = `第 ${currentSearchPage} 頁，共 ${totalPages} 頁 (總計 ${searchResults.length} 筆)`;
   document.getElementById('searchPrevPageBtn').disabled = currentSearchPage <= 1;
   document.getElementById('searchNextPageBtn').disabled = currentSearchPage >= totalPages;
+}
+
+function startBarcodeScanner(targetInputId) {
+  currentScanTarget = targetInputId;
+  document.getElementById('barcodeScanner').style.display = 'flex';
+  Quagga.init({
+    inputStream: {
+      name: "Live",
+      type: "LiveStream",
+      target: document.getElementById('video'),
+      constraints: { facingMode: "environment" }
+    },
+    decoder: { readers: ["code_128_reader", "ean_reader", "upc_reader"] }
+  }, (err) => {
+    if (err) {
+      console.error("Quagga 初始化失敗:", err);
+      alert("無法啟動條碼掃描器，請檢查攝影機權限或設備：" + err.message);
+      stopBarcodeScanner();
+      return;
+    }
+    Quagga.start();
+  });
+  Quagga.onDetected((data) => {
+    if (data && data.codeResult && data.codeResult.code) {
+      const code = data.codeResult.code;
+      const input = document.getElementById(currentScanTarget);
+      if (input) {
+        const currentValue = input.value.trim();
+        input.value = currentValue ? `${currentValue},${code}` : code;
+      }
+      stopBarcodeScanner();
+    }
+  });
+}
+
+function stopBarcodeScanner() {
+  Quagga.stop();
+  document.getElementById('barcodeScanner').style.display = 'none';
+  currentScanTarget = null;
 }
 
 document.getElementById('inBtn').onclick = async () => {
@@ -899,6 +837,7 @@ document.getElementById('inBtn').onclick = async () => {
     if (result.status === 'success') {
       alert('入庫成功！');
       loadData();
+      loadHistoryData();
       document.getElementById('in_name').value = '';
       document.getElementById('in_qty').value = '';
       document.getElementById('in_threshold').value = '';
@@ -930,41 +869,33 @@ document.getElementById('outBtn').onclick = async () => {
     alert('請輸入物料名稱和數量！');
     return;
   }
-  // 將輸入的序號拆分為陣列
-  const inputSerialNumbers = payload.sn ? payload.sn.split(',').map(s => s.trim().toLowerCase()) : [];
-  // 如果有輸入序號，檢查數量是否等於序號數量
+  const inputSerialNumbers = payload.sn ? payload.sn.split(',').map(s => s.trim()).filter(s => s) : [];
   if (inputSerialNumbers.length > 0 && inputSerialNumbers.length !== payload.qty) {
     alert(`出庫數量 (${payload.qty}) 必須等於序號數量 (${inputSerialNumbers.length})！`);
     return;
   }
-  // 檢查項目是否存在
-  const stockItem = rawData.find(r => 
-    r[COLS.name].toLowerCase() === payload.name.toLowerCase() &&
-    (!payload.wh || r[COLS.wh].toLowerCase() === payload.wh.toLowerCase()) &&
-    (!payload.spot || r[COLS.spot].toLowerCase() === payload.spot.toLowerCase()) &&
-    (!payload.loc || r[COLS.loc].toLowerCase() === payload.loc.toLowerCase())
+  const stockItem = rawData.find(r =>
+    r[COLS.name] === payload.name &&
+    (!payload.wh || r[COLS.wh] === payload.wh) &&
+    (!payload.spot || r[COLS.spot] === payload.spot) &&
+    (!payload.loc || r[COLS.loc] === payload.loc)
   );
   if (!stockItem) {
     alert('找不到指定的物料項目！請檢查名稱、倉庫、地點或位置。');
     return;
   }
-  // 檢查庫存數量
   if (parseInt(stockItem[COLS.qty]) < payload.qty) {
     alert(`庫存不足！目前庫存：${stockItem[COLS.qty]}，欲出庫：${payload.qty}`);
     return;
   }
-  // 檢查序號（如果提供）
   if (inputSerialNumbers.length > 0) {
-    const serialNumbers = stockItem[COLS.sn] ? stockItem[COLS.sn].split(',').map(s => s.trim().toLowerCase()) : [];
+    const serialNumbers = stockItem[COLS.sn] ? stockItem[COLS.sn].split(',').map(s => s.trim()) : [];
     if (inputSerialNumbers.some(sn => !serialNumbers.includes(sn))) {
       alert(`輸入的序號 ${inputSerialNumbers.join(', ')} 中有無效序號！`);
       return;
     }
-  } else if (stockItem[COLS.sn]) {
-    // 如果項目有序號但未輸入序號，提示確認
-    if (!confirm(`該物料有序號 (${stockItem[COLS.sn]})，是否確認不指定序號出庫？`)) {
-      return;
-    }
+  } else if (stockItem[COLS.sn] && !confirm(`該物料有序號 (${stockItem[COLS.sn]})，不指定序號可能影響追蹤，是否繼續？`)) {
+    return;
   }
   try {
     const res = await fetch(API_URL, {
@@ -976,7 +907,8 @@ document.getElementById('outBtn').onclick = async () => {
     const result = await res.json();
     if (result.status === 'success') {
       alert('出庫成功！');
-      loadData(); // 重新載入資料，更新所有表格
+      loadData();
+      loadHistoryData();
       document.getElementById('out_name').value = '';
       document.getElementById('out_qty').value = '';
       document.getElementById('out_wh').value = '';
@@ -991,8 +923,11 @@ document.getElementById('outBtn').onclick = async () => {
     alert('出庫失敗，請檢查網路或API設定: ' + e.message);
   }
 };
-  
-// 新增：所有庫存分頁事件
+
+document.getElementById('scanInSnBtn').onclick = () => startBarcodeScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick = () => startBarcodeScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick = stopBarcodeScanner;
+
 document.getElementById('allStockPrevPageBtn').onclick = () => {
   if (currentAllStockPage > 1) {
     currentAllStockPage--;
@@ -1006,7 +941,6 @@ document.getElementById('allStockNextPageBtn').onclick = () => {
   }
 };
 
-// 新增：匯出所有庫存 CSV
 document.getElementById('exportAllStockBtn').onclick = () => {
   if (rawData.length === 0) {
     alert('無庫存資料可匯出！');
@@ -1014,7 +948,7 @@ document.getElementById('exportAllStockBtn').onclick = () => {
   }
   const csvContent = [
     '"名稱","數量","倉庫","地點","位置","序號","備註"',
-    ...rawData.map(r => `"${r[COLS.name] || ''}","${r[COLS.qty] || 0}","${r[COLS.wh] || ''}","${r[COLS.spot] || ''}","${r[COLS.loc] || ''}","${r[COLS.sn] || ''}","${r[COLS.note] || ''}"`)
+    ...rawData.map(r => `${escapeCsv(r[COLS.name])},${parseInt(r[COLS.qty]) || 0},${escapeCsv(r[COLS.wh])},${escapeCsv(r[COLS.spot])},${escapeCsv(r[COLS.loc])},${escapeCsv(r[COLS.sn])},${escapeCsv(r[COLS.note])}`)
   ].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1025,7 +959,24 @@ document.getElementById('exportAllStockBtn').onclick = () => {
   URL.revokeObjectURL(url);
 };
 
-  
+document.getElementById('exportHistoryBtn').onclick = () => {
+  if (historyData.length === 0) {
+    alert('無歷史紀錄可匯出！');
+    return;
+  }
+  const csvContent = [
+    '"物料名稱","動作","數量","倉庫","地點","位置","序號","時間"',
+    ...historyData.map(r => `${escapeCsv(r.name)},${escapeCsv(r.action)},${r.quantity || 0},${escapeCsv(r.warehouse)},${escapeCsv(r.locationSpot)},${escapeCsv(r.location)},${escapeCsv(r.serialNumber)},${escapeCsv(new Date(r.date).toLocaleString())}`)
+  ].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `歷史紀錄_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('search').value = '';
   document.getElementById('warehouseFilter').value = '';
@@ -1034,22 +985,37 @@ document.getElementById('refreshBtn').onclick = () => {
   loadData();
 };
 
+document.getElementById('historyRefreshBtn').onclick = loadHistoryData;
+document.getElementById('historyClearBtn').onclick = () => {
+  document.getElementById('historySearch').value = '';
+  document.getElementById('historyAction').value = '';
+  document.getElementById('historyDateStart').value = '';
+  document.getElementById('historyDateEnd').value = '';
+  document.getElementById('historyWarehouse').value = '';
+  document.getElementById('historyLocationSpot').value = '';
+  loadHistoryData();
+};
+
 document.getElementById('prevPageBtn').onclick = () => { if (currentPage > 1) { currentPage--; renderLowStock(); } };
 document.getElementById('nextPageBtn').onclick = () => { if (currentPage < Math.ceil(lowStockData.length / itemsPerPage)) { currentPage++; renderLowStock(); } };
 document.getElementById('searchPrevPageBtn').onclick = () => { if (currentSearchPage > 1) { currentSearchPage--; renderSearchResultsPage(); } };
 document.getElementById('searchNextPageBtn').onclick = () => { if (currentSearchPage < Math.ceil(searchResults.length / searchItemsPerPage)) { currentSearchPage++; renderSearchResultsPage(); } };
+document.getElementById('historyPrevBtn').onclick = () => { if (currentHistoryPage > 1) { currentHistoryPage--; renderHistory(); } };
+document.getElementById('historyNextBtn').onclick = () => { if (currentHistoryPage < Math.ceil(historyData.length / historyItemsPerPage)) { currentHistoryPage++; renderHistory(); } };
 
-// 添加自動搜索事件
-document.getElementById('in_name').oninput = () => autoFillItemDetails('in_name', 'in_wh', 'in_spot', 'in_loc', 'in_sn');
-document.getElementById('out_name').oninput = () => autoFillItemDetails('out_name', 'out_wh', 'out_spot', 'out_loc', 'out_sn');
-
-// 添加下拉式選單的 onchange 事件
 document.getElementById('warehouseFilter').onchange = renderSearchResults;
 document.getElementById('locationSpotFilter').onchange = renderSearchResults;
 document.getElementById('locationFilter').onchange = renderSearchResults;
 document.getElementById('search').oninput = renderSearchResults;
+document.getElementById('historySearch').oninput = renderHistory;
+document.getElementById('historyAction').onchange = renderHistory;
+document.getElementById('historyDateStart').onchange = renderHistory;
+document.getElementById('historyDateEnd').onchange = renderHistory;
+document.getElementById('historyWarehouse').onchange = renderHistory;
+document.getElementById('historyLocationSpot').onchange = renderHistory;
 
 loadData();
+loadHistoryData();
 </script>
 </body>
 </html>
