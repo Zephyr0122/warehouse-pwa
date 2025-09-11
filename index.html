@@ -157,7 +157,7 @@
       <div class="card p-3 mb-3">
         <h5>➕ 入庫</h5>
         <div class="input-container mb-2">
-          <input id="in_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off">
+          <input id="in_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off" maxlength="100">
           <div id="in_name_suggestions" class="suggestion-dropdown"></div>
         </div>
         <div class="input-group mb-2">
@@ -177,7 +177,7 @@
       <div class="card p-3 mb-3">
         <h5>➖ 出庫</h5>
         <div class="input-container mb-2">
-          <input id="out_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off">
+          <input id="out_name" class="form-control small-input" placeholder="物料名稱（輸入時會自動搜尋類似物品）" autocomplete="off" maxlength="100">
           <div id="out_name_suggestions" class="suggestion-dropdown"></div>
         </div>
         <input id="out_qty" type="number" min="1" class="form-control small-input mb-2" placeholder="數量">
@@ -369,7 +369,14 @@ const searchItemsPerPage = 10;
 const allStockItemsPerPage = 10;
 
 function processSerialNumbers(serialNumber) {
-  return serialNumber ? serialNumber.split(',').map(s => s.trim()).filter(s => s) : [];
+  if (!serialNumber) return [];
+  const serials = serialNumber.split(',').map(s => s.trim()).filter(s => s);
+  const uniqueSerials = [...new Set(serials)];
+  if (uniqueSerials.length < serials.length) {
+    alert('序號清單中包含重複序號，請檢查！');
+    return [];
+  }
+  return uniqueSerials;
 }
 
 function handleApiError(error, defaultMessage) {
@@ -553,6 +560,7 @@ class SmartSuggestion {
     this.hideSuggestions();
   }
 }
+
 const smartSuggestion = new SmartSuggestion();
 smartSuggestion.init();
 
@@ -560,6 +568,14 @@ async function exportToCsv(type) {
   try {
     const res = await fetch(`${API_URL}?action=export&type=${type}`);
     if (!res.ok) throw new Error(`匯出失敗: ${res.status}`);
+    const contentType = res.headers.get('content-type');
+    if (contentType.includes('application/json')) {
+      const result = await res.json();
+      if (result.status === 'error') {
+        handleApiError(result, `匯出${type === 'inventory' ? '庫存' : type === 'history' ? '歷史紀錄' : '低庫存'}失敗`);
+        return;
+      }
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -603,7 +619,16 @@ async function loadData() {
 
 async function loadHistoryData() {
   try {
-    const res = await fetch(`${API_URL}?action=getHistory`);
+    const params = new URLSearchParams({
+      action: 'filteredHistory',
+      keyword: document.getElementById('historySearch').value.trim(),
+      action: document.getElementById('historyAction').value,
+      dateStart: document.getElementById('historyDateStart').value,
+      dateEnd: document.getElementById('historyDateEnd').value,
+      warehouse: document.getElementById('historyWarehouse').value,
+      locationSpot: document.getElementById('historyLocationSpot').value
+    });
+    const res = await fetch(`${API_URL}?${params.toString()}`);
     if (!res.ok) throw new Error(`API 回應錯誤: ${res.status}`);
     const data = await res.json();
     if (data.status === 'error') throw new Error(data.message || 'API 返回錯誤');
@@ -644,29 +669,10 @@ function renderAllStock() {
 }
 
 function renderHistory() {
-  const kw = document.getElementById('historySearch').value.trim();
-  const action = document.getElementById('historyAction').value;
-  const dateStart = document.getElementById('historyDateStart').value;
-  const dateEnd = document.getElementById('historyDateEnd').value;
-  const wh = document.getElementById('historyWarehouse').value;
-  const spot = document.getElementById('historyLocationSpot').value;
-  const filteredData = historyData.filter(row => {
-    const name = (row[API_FIELDS.history.name] || '').toString();
-    const rowAction = (row[API_FIELDS.history.action] || '').toString();
-    const rowDate = new Date(row[API_FIELDS.history.date]).toISOString().split('T')[0];
-    const rowWh = (row[API_FIELDS.history.warehouse] || '').toString();
-    const rowSpot = (row[API_FIELDS.history.locationSpot] || '').toString();
-    return (!kw || name.includes(kw)) &&
-           (!action || rowAction === action) &&
-           (!dateStart || rowDate >= dateStart) &&
-           (!dateEnd || rowDate <= dateEnd) &&
-           (!wh || rowWh === wh) &&
-           (!spot || rowSpot === spot);
-  });
-  const totalPages = Math.ceil(filteredData.length / historyItemsPerPage);
+  const totalPages = Math.ceil(historyData.length / historyItemsPerPage);
   const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
   const endIndex = startIndex + historyItemsPerPage;
-  const pageData = filteredData.slice(startIndex, endIndex);
+  const pageData = historyData.slice(startIndex, endIndex);
   const historyList = document.getElementById('historyList');
   if (pageData.length > 0) {
     historyList.innerHTML = pageData.map(row => `
@@ -675,13 +681,13 @@ function renderHistory() {
         <div>數量: ${row[API_FIELDS.history.quantity] || 0}</div>
         <div>倉庫: ${row[API_FIELDS.history.warehouse] || '-'} · 地點: ${row[API_FIELDS.history.locationSpot] || '-'} · 位置: ${row[API_FIELDS.history.location] || '-'}</div>
         ${row[API_FIELDS.history.serialNumber] ? `<div>序號: ${row[API_FIELDS.history.serialNumber]}</div>` : ''}
-        <div>時間: ${new Date(row[API_FIELDS.history.date]).toLocaleString()}</div>
+        <div>時間: ${row[API_FIELDS.history.date]}</div>
       </div>
     `).join('');
   } else {
     historyList.innerHTML = '<div class="text-center text-muted">無歷史紀錄</div>';
   }
-  document.getElementById('historyPageInfo').textContent = totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${filteredData.length} 筆)` : '無資料';
+  document.getElementById('historyPageInfo').textContent = totalPages > 0 ? `第 ${currentHistoryPage} 頁，共 ${totalPages} 頁 (總計 ${historyData.length} 筆)` : '無資料';
   document.getElementById('historyPrevBtn').disabled = currentHistoryPage <= 1;
   document.getElementById('historyNextBtn').disabled = currentHistoryPage >= totalPages;
 }
@@ -832,7 +838,12 @@ function startBarcodeScanner(targetInputId) {
       const input = document.getElementById(currentScanTarget);
       if (input) {
         const currentValue = input.value.trim();
-        input.value = currentValue ? `${currentValue},${code}` : code;
+        const serials = processSerialNumbers(currentValue);
+        if (serials.includes(code)) {
+          alert('此序號已存在，請勿重複掃描！');
+        } else {
+          input.value = currentValue ? `${currentValue},${code}` : code;
+        }
       }
       stopBarcodeScanner();
     }
@@ -840,6 +851,7 @@ function startBarcodeScanner(targetInputId) {
 }
 
 function stopBarcodeScanner() {
+  Quagga.offDetected();
   Quagga.stop();
   document.getElementById('barcodeScanner').style.display = 'none';
   currentScanTarget = null;
@@ -859,6 +871,18 @@ document.getElementById('inBtn').onclick = async () => {
   };
   if (!payload.name || !payload.qty) {
     alert('請輸入物料名稱和數量！');
+    return;
+  }
+  if (payload.name.length > 100) {
+    alert('物料名稱不得超過100個字符！');
+    return;
+  }
+  if (payload.qty <= 0 || isNaN(payload.qty)) {
+    alert('數量必須為正整數！');
+    return;
+  }
+  if (payload.threshold < 0 || isNaN(payload.threshold)) {
+    alert('低庫存警戒值必須為非負整數！');
     return;
   }
   const inputSerialNumbers = processSerialNumbers(payload.sn);
@@ -907,6 +931,14 @@ document.getElementById('outBtn').onclick = async () => {
   };
   if (!payload.name || !payload.qty) {
     alert('請輸入物料名稱和數量！');
+    return;
+  }
+  if (payload.name.length > 100) {
+    alert('物料名稱不得超過100個字符！');
+    return;
+  }
+  if (payload.qty <= 0 || isNaN(payload.qty)) {
+    alert('數量必須為正整數！');
     return;
   }
   const inputSerialNumbers = processSerialNumbers(payload.sn);
@@ -982,30 +1014,41 @@ document.getElementById('allStockNextPageBtn').onclick = () => {
 document.getElementById('exportAllStockBtn').onclick = () => exportToCsv('inventory');
 document.getElementById('exportHistoryBtn').onclick = () => exportToCsv('history');
 document.getElementById('exportLowStockBtn').onclick = () => exportToCsv('lowStock');
-document.getElementById('exportSearchBtn').onclick = () => {
+document.getElementById('exportSearchBtn').onclick = async () => {
   if (searchResults.length === 0) {
     alert('無查詢結果可匯出！');
     return;
   }
-  const csvContent = [
-    '"名稱","數量","倉庫","地點","位置","序號","備註"',
-    ...searchResults.map(r => [
-      `"${r[API_FIELDS.inventory.name]}"`,
-      parseInt(r[API_FIELDS.inventory.quantity]) || 0,
-      `"${r[API_FIELDS.inventory.warehouse] || ''}"`,
-      `"${r[API_FIELDS.inventory.locationSpot] || ''}"`,
-      `"${r[API_FIELDS.inventory.location] || ''}"`,
-      `"${r[API_FIELDS.inventory.serialNumber] || ''}"`,
-      `"${r[API_FIELDS.inventory.note] || ''}"`
-    ].join(','))
-  ].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `查詢結果_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  try {
+    const params = new URLSearchParams({
+      action: 'export',
+      type: 'search',
+      keyword: document.getElementById('search').value.trim(),
+      warehouse: document.getElementById('warehouseFilter').value.trim(),
+      locationSpot: document.getElementById('locationSpotFilter').value.trim(),
+      location: document.getElementById('locationFilter').value.trim()
+    });
+    const res = await fetch(`${API_URL}?${params.toString()}`);
+    if (!res.ok) throw new Error(`匯出失敗: ${res.status}`);
+    const contentType = res.headers.get('content-type');
+    if (contentType.includes('application/json')) {
+      const result = await res.json();
+      if (result.status === 'error') {
+        handleApiError(result, '匯出搜尋結果失敗');
+        return;
+      }
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `查詢結果_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('匯出搜尋結果失敗:', e);
+    handleApiError({ message: '匯出搜尋結果失敗，請檢查網路或API設定', detail: e.message });
+  }
 };
 document.getElementById('refreshBtn').onclick = () => {
   document.getElementById('search').value = '';
@@ -1034,12 +1077,13 @@ document.getElementById('warehouseFilter').onchange = renderSearchResults;
 document.getElementById('locationSpotFilter').onchange = renderSearchResults;
 document.getElementById('locationFilter').onchange = renderSearchResults;
 document.getElementById('search').oninput = renderSearchResults;
-document.getElementById('historySearch').oninput = renderHistory;
-document.getElementById('historyAction').onchange = renderHistory;
-document.getElementById('historyDateStart').onchange = renderHistory;
-document.getElementById('historyDateEnd').onchange = renderHistory;
-document.getElementById('historyWarehouse').onchange = renderHistory;
-document.getElementById('historyLocationSpot').onchange = renderHistory;
+document.getElementById('historySearch').oninput = loadHistoryData;
+document.getElementById('historyAction').onchange = loadHistoryData;
+document.getElementById('historyDateStart').onchange = loadHistoryData;
+document.getElementById('historyDateEnd').onchange = loadHistoryData;
+document.getElementById('historyWarehouse').onchange = loadHistoryData;
+document.getElementById('historyLocationSpot').onchange = loadHistoryData;
+
 loadData();
 loadHistoryData();
 </script>
