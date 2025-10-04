@@ -327,6 +327,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
+let html5QrCodeInstance = null;
 const API_URL = "https://script.google.com/macros/s/AKfycbw-Bdj6jjALlnHD94-oX1BKUZdbgds2GKa7PLxW-PN70S-qykf1tyV1moFw44HhAUHdYQ/exec";
 const API_FIELDS = {
   inventory: {
@@ -622,7 +623,7 @@ async function loadHistoryData() {
     const params = new URLSearchParams({
       action: 'filteredHistory',
       keyword: document.getElementById('historySearch').value.trim(),
-      action: document.getElementById('historyAction').value,
+      actionType: document.getElementById('historyAction').value,
       dateStart: document.getElementById('historyDateStart').value,
       dateEnd: document.getElementById('historyDateEnd').value,
       warehouse: document.getElementById('historyWarehouse').value,
@@ -816,6 +817,13 @@ function startBarcodeScanner(targetInputId) {
   currentScanTarget = targetInputId;
   document.getElementById('barcodeScanner').style.display = 'flex';
 
+// ✅ 新增：檢查 HTTPS
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    alert('相機掃描需要 HTTPS 連線！請使用 https:// 開頭的網址。');
+    stopBarcodeScanner();
+    return;
+  }
+  
   // iOS 相容性檢查
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     alert('您的瀏覽器不支援相機掃描，請使用 Chrome 或更新 Safari。');
@@ -823,7 +831,13 @@ function startBarcodeScanner(targetInputId) {
     return;
   }
 
-  const html5QrCode = new Html5Qrcode("video");
+// ✅ 修改：先停止舊的掃描器
+  if (html5QrCodeInstance) {
+    html5QrCodeInstance.stop().catch(err => console.error('停止舊掃描器失敗:', err));
+  }
+  
+  // ✅ 修改：使用全域變數
+  html5QrCodeInstance = new Html5Qrcode("video");
   const config = { 
     fps: 10, 
     qrbox: { width: 250, height: 250 },
@@ -831,7 +845,7 @@ function startBarcodeScanner(targetInputId) {
     useBarCodeDetectorIfSupported: true  // 利用 iOS 原生 BarCodeDetector
   };
 
-  html5QrCode.start(
+  html5QrCodeInstance.start(
     { facingMode: "environment" },  // 後置相機
     config,
     (decodedText) => {
@@ -869,11 +883,19 @@ function startBarcodeScanner(targetInputId) {
 }
 
 function stopBarcodeScanner() {
-  const html5QrCode = window.html5QrCode;  // 存取全域實例
-  if (html5QrCode && html5QrCode.isScanning) {
-    html5QrCode.stop().then(() => {
-      html5QrCode.clear();  // 清理 DOM
-    }).catch(err => console.error('停止掃描器失敗:', err));
+  // ✅ 使用全域變數
+  if (html5QrCodeInstance) {
+    // ✅ 檢查是否正在掃描
+    if (html5QrCodeInstance.isScanning) {
+      html5QrCodeInstance.stop().then(() => {
+        html5QrCodeInstance.clear();
+        html5QrCodeInstance = null;  // ✅ 清空實例
+      }).catch(err => console.error('停止掃描器失敗:', err));
+    } else {
+      // 如果沒在掃描，直接清理
+      html5QrCodeInstance.clear();
+      html5QrCodeInstance = null;
+    }
   }
   document.getElementById('barcodeScanner').style.display = 'none';
   currentScanTarget = null;
