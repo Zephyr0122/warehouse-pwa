@@ -818,7 +818,7 @@ function renderSearchResultsPage() {
 function startBarcodeScanner(targetInputId) {
   currentScanTarget = targetInputId;
   
-  // ✅ 檢查 HTTPS (localhost 除外)
+  // ✅ 檢查 HTTPS
   if (location.protocol !== 'https:' && !location.hostname.includes('localhost') && location.hostname !== '127.0.0.1') {
     alert('相機掃描需要 HTTPS 連線！\n請使用 https:// 開頭的網址。');
     return;
@@ -830,113 +830,126 @@ function startBarcodeScanner(targetInputId) {
     return;
   }
 
-  // ✅ 先停止舊的掃描器實例
+  // ✅ 先停止並清理舊的掃描器
   if (html5QrCodeInstance) {
     try {
-      if (html5QrCodeInstance.getState() === Html5QrcodeScannerState.SCANNING) {
-        html5QrCodeInstance.stop().catch(() => {});
-      }
-      html5QrCodeInstance.clear();
+      // 直接嘗試停止,不檢查狀態
+      html5QrCodeInstance.stop()
+        .then(() => {
+          html5QrCodeInstance.clear();
+          html5QrCodeInstance = null;
+          initializeScanner();
+        })
+        .catch(() => {
+          // 如果停止失敗,直接清理
+          try {
+            html5QrCodeInstance.clear();
+          } catch(e) {}
+          html5QrCodeInstance = null;
+          initializeScanner();
+        });
     } catch (e) {
       console.warn('清理舊掃描器失敗:', e);
+      html5QrCodeInstance = null;
+      initializeScanner();
     }
-    html5QrCodeInstance = null;
+  } else {
+    initializeScanner();
   }
-
-  // ✅ 顯示掃描器介面
-  document.getElementById('barcodeScanner').style.display = 'flex';
   
-  // ✅ 延遲初始化,確保 DOM 渲染完成
-  setTimeout(() => {
-    try {
-      html5QrCodeInstance = new Html5Qrcode("video");
-      
-      const config = { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true  // iOS 原生支援
-        }
-      };
+  function initializeScanner() {
+    // 顯示掃描器介面
+    document.getElementById('barcodeScanner').style.display = 'flex';
+    
+    // 延遲初始化
+    setTimeout(() => {
+      try {
+        html5QrCodeInstance = new Html5Qrcode("video");
+        
+        const config = { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8
+          ]
+        };
 
-      html5QrCodeInstance.start(
-        { facingMode: "environment" },  // 後置相機
-        config,
-        (decodedText) => {
-          console.log('✅ 掃描成功:', decodedText);
-          const code = decodedText.trim();
-          const input = document.getElementById(currentScanTarget);
-          
-          if (input) {
-            const currentValue = input.value.trim();
-            const serials = processSerialNumbers(currentValue);
+        html5QrCodeInstance.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => {
+            console.log('✅ 掃描成功:', decodedText);
+            const code = decodedText.trim();
+            const input = document.getElementById(currentScanTarget);
             
-            if (serials.includes(code)) {
-              alert('⚠️ 此序號已存在,請勿重複掃描！');
-            } else {
-              input.value = currentValue ? `${currentValue},${code}` : code;
-              // ✅ 震動回饋 (支援的裝置)
-              if (navigator.vibrate) navigator.vibrate(200);
+            if (input) {
+              const currentValue = input.value.trim();
+              const serials = processSerialNumbers(currentValue);
+              
+              if (serials.includes(code)) {
+                alert('⚠️ 此序號已存在,請勿重複掃描！');
+              } else {
+                input.value = currentValue ? `${currentValue},${code}` : code;
+                if (navigator.vibrate) navigator.vibrate(200);
+              }
             }
+            stopBarcodeScanner();
+          },
+          (errorMessage) => {
+            // 掃描中的錯誤忽略
           }
+        ).catch((err) => {
+          console.error('❌ 啟動掃描器失敗:', err);
+          
+          let errorMsg = '無法啟動相機掃描器\n\n';
+          
+          if (err.name === 'NotAllowedError' || err.message?.includes('Permission denied')) {
+            errorMsg += '📷 相機權限被拒絕\n\niOS 解決方式:\n1. 設定 > Safari > 相機 > 允許\n2. 重新整理頁面\n\nChrome:\n設定 > 網站設定 > 相機 > 允許';
+          } else if (err.name === 'NotFoundError') {
+            errorMsg += '❌ 未找到相機\n\n請檢查:\n• 裝置是否有相機\n• 其他 App 是否佔用相機';
+          } else if (err.name === 'NotReadableError') {
+            errorMsg += '🔒 相機被占用\n\n請關閉其他使用相機的 App';
+          } else if (err.name === 'OverconstrainedError') {
+            errorMsg += '⚙️ 相機不支援所需設定\n\n請嘗試其他瀏覽器';
+          } else {
+            errorMsg += `錯誤: ${err.message || err.name || '未知錯誤'}`;
+          }
+          
+          alert(errorMsg);
           stopBarcodeScanner();
-        },
-        (errorMessage) => {
-          // ✅ 正常掃描時的錯誤可忽略 (每幀都會報錯)
-          // console.warn('掃描中:', errorMessage);
-        }
-      ).catch((err) => {
-        console.error('❌ 啟動掃描器失敗:', err);
-        
-        let errorMsg = '無法啟動相機掃描器\n\n';
-        
-        if (err.name === 'NotAllowedError' || err.message.includes('Permission denied')) {
-          errorMsg += '📷 相機權限被拒絕\n\niOS 解決方式:\n1. 前往「設定」>「Safari」\n2. 開啟「相機」權限\n3. 重新整理頁面\n\nChrome 解決方式:\n前往設定 > 隱私權與安全性 > 網站設定 > 相機';
-        } else if (err.name === 'NotFoundError') {
-          errorMsg += '❌ 未找到相機\n\n請檢查:\n1. 裝置是否有相機\n2. 其他 App 是否正在使用相機\n3. 是否允許瀏覽器存取相機';
-        } else if (err.name === 'NotReadableError') {
-          errorMsg += '🔒 相機被占用\n\n請關閉其他使用相機的應用程式';
-        } else if (err.name === 'OverconstrainedError') {
-          errorMsg += '⚙️ 相機不支援所需設定\n\n請嘗試使用其他瀏覽器';
-        } else {
-          errorMsg += `錯誤訊息: ${err.message || err.name || '未知錯誤'}`;
-        }
-        
-        alert(errorMsg);
+        });
+      } catch (err) {
+        console.error('❌ 初始化失敗:', err);
+        alert('掃描器初始化失敗\n\n' + (err.message || '未知錯誤'));
         stopBarcodeScanner();
-      });
-    } catch (err) {
-      console.error('❌ 初始化掃描器失敗:', err);
-      alert('掃描器初始化失敗\n\n' + (err.message || '未知錯誤'));
-      stopBarcodeScanner();
-    }
-  }, 100);  // 延遲 100ms
+      }
+    }, 150);
+  }
 }
 
 function stopBarcodeScanner() {
   if (html5QrCodeInstance) {
-    try {
-      // ✅ 檢查掃描器狀態
-      const state = html5QrCodeInstance.getState();
-      if (state === Html5QrcodeScannerState.SCANNING) {
-        html5QrCodeInstance.stop()
-          .then(() => {
-            html5QrCodeInstance.clear();
-            html5QrCodeInstance = null;
-          })
-          .catch(err => {
-            console.error('停止掃描器失敗:', err);
-            html5QrCodeInstance = null;
-          });
-      } else {
-        html5QrCodeInstance.clear();
+    html5QrCodeInstance.stop()
+      .then(() => {
+        try {
+          html5QrCodeInstance.clear();
+        } catch(e) {
+          console.warn('清理掃描器界面失敗:', e);
+        }
         html5QrCodeInstance = null;
-      }
-    } catch (err) {
-      console.error('清理掃描器失敗:', err);
-      html5QrCodeInstance = null;
-    }
+      })
+      .catch(err => {
+        console.error('停止掃描器失敗:', err);
+        try {
+          html5QrCodeInstance.clear();
+        } catch(e) {}
+        html5QrCodeInstance = null;
+      });
   }
   
   document.getElementById('barcodeScanner').style.display = 'none';
