@@ -3,8 +3,6 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>倉庫物料管理（PWA)</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -42,14 +40,10 @@
     justify-content: center; align-items: center; flex-direction: column;
   }
   #video {
-  width: 90%; 
-  max-width: 400px; 
-  height: auto;
-  border: 3px solid #28a745;  /* 加粗邊框 */
-  border-radius: 10px;
-  box-shadow: 0 0 30px rgba(40, 167, 69, 0.8);  /* 增強陰影 */
-  background: #000;  /* 避免白屏 */
-}
+    width: 90%; max-width: 400px; height: auto;
+    border: 2px solid #28a745; border-radius: 10px;
+    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+  }
   .scanner-overlay {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 250px; height: 150px; border: 2px solid #28a745; border-radius: 10px;
@@ -316,25 +310,21 @@
   </div>
 </div>
 <div id="barcodeScanner" class="barcode-scanner">
-  <video id="video" autoplay muted playsinline></video>
-  <div class="scanner-overlay">
-    <div class="scanner-corner top-left"></div>
-    <div class="scanner-corner top-right"></div>
-    <div class="scanner-corner bottom-left"></div>
-    <div class="scanner-corner bottom-right"></div>
-  </div>
+  <video id="video" autoplay muted playsinline style="width: 100%; max-width: 400px;"></video>
+  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 260px; height: 160px; border: 2px solid #28a745; pointer-events: none; border-radius: 12px;"></div>
   <div class="scanner-info">
-    <p><i class="fas fa-barcode"></i> 請將條碼對準掃描框</p>
+    <p>請將條碼置於框內</p>
     <button id="closeScannerBtn" class="btn btn-danger btn-lg">
-      <i class="fas fa-times"></i> 關閉掃描器
+      <i class="fas fa-times"></i> 關閉
     </button>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
 let html5QrCodeInstance = null;
-let isScanning = false; // 追蹤掃描狀態
+let codeReader = null;
+let isScanning = false;
 const API_URL = "https://script.google.com/macros/s/AKfycbw-Bdj6jjALlnHD94-oX1BKUZdbgds2GKa7PLxW-PN70S-qykf1tyV1moFw44HhAUHdYQ/exec";
 const API_FIELDS = {
   inventory: {
@@ -822,185 +812,78 @@ function renderSearchResultsPage() {
 
 function startBarcodeScanner(targetInputId) {
   currentScanTarget = targetInputId;
-  
-  // 檢查 HTTPS
-  if (location.protocol !== 'https:' && !location.hostname.includes('localhost')) {
-    alert('相機掃描需要 HTTPS 連線！');
-    return;
-  }
-  
-  // 檢查瀏覽器支援
-  if (!navigator.mediaDevices?.getUserMedia) {
-    alert('您的瀏覽器不支援相機功能\n\niOS 請使用 Safari 14+ 或 Chrome 87+');
-    return;
-  }
+  const scanner = document.getElementById('barcodeScanner');
+  scanner.style.display = 'flex';
 
-  // 如果正在掃描,先停止
-  if (isScanning && html5QrCodeInstance) {
-    console.log('停止舊的掃描器...');
+  // HTTPS 檢查
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    alert('掃描需要 HTTPS 連線！');
     stopBarcodeScanner();
-    // 等待停止完成後再啟動
-    setTimeout(() => startBarcodeScanner(targetInputId), 500);
     return;
   }
 
-  // 顯示掃描器界面
-  document.getElementById('barcodeScanner').style.display = 'flex';
-  
-  // 延遲初始化,確保 DOM 完全渲染
-  setTimeout(() => {
-    try {
-      // 確保 video 元素存在
-      const videoElement = document.getElementById('video');
-      if (!videoElement) {
-        throw new Error('找不到 video 元素');
-      }
+  // 停止舊掃描
+  if (isScanning) stopBarcodeScanner();
 
-      console.log('初始化掃描器...');
-      html5QrCodeInstance = new Html5Qrcode("video");
-      
-      const config = { 
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        // 支援多種條碼格式
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_93
-        ],
-        // 關鍵設置
-        rememberLastUsedCamera: true,
-        showTorchButtonIfSupported: true
-      };
+  const videoElement = document.getElementById('video');
+  codeReader = new ZXing.BrowserMultiFormatReader();
 
-      // 啟動相機
-      html5QrCodeInstance.start(
-        { facingMode: "environment" }, // 後置相機
-        config,
-        // 掃描成功回調
-        (decodedText) => {
-          console.log('✅ 掃描成功:', decodedText);
-          isScanning = false;
-          
-          const code = decodedText.trim();
-          const input = document.getElementById(currentScanTarget);
-          
-          if (input) {
-            const currentValue = input.value.trim();
-            const serials = processSerialNumbers(currentValue);
-            
-            if (serials.includes(code)) {
-              alert('⚠️ 此序號已存在,請勿重複掃描！');
-            } else {
-              input.value = currentValue ? `${currentValue},${code}` : code;
-              // 震動回饋
-              if (navigator.vibrate) navigator.vibrate(200);
-            }
+  codeReader.decodeFromVideoDevice(
+    null, // 自動選擇後置相機
+    videoElement,
+    (result, err) => {
+      if (result) {
+        console.log('掃描成功:', result.text);
+        const code = result.text.trim();
+        const input = document.getElementById(currentScanTarget);
+        if (input) {
+          const current = input.value.trim();
+          const list = current ? current.split(',').map(s => s.trim()) : [];
+          if (list.includes(code)) {
+            alert('此序號已存在！');
+          } else {
+            input.value = current ? `${current}, ${code}` : code;
           }
-          
-          stopBarcodeScanner();
-        },
-        // 掃描錯誤回調 (每幀都會觸發,可忽略)
-        (errorMessage) => {
-          // 不輸出,避免控制台刷屏
         }
-      ).then(() => {
-        console.log('✅ 相機啟動成功');
-        isScanning = true;
-      }).catch((err) => {
-        console.error('❌ 相機啟動失敗:', err);
-        isScanning = false;
-        
-        let errorMsg = '無法啟動相機\n\n';
-        
-        // 根據錯誤類型提供具體解決方案
-        if (err.name === 'NotAllowedError' || err.message?.includes('Permission denied')) {
-          errorMsg += '📷 相機權限被拒絕\n\n';
-          errorMsg += 'iOS Safari 解決方法:\n';
-          errorMsg += '1. 設定 > Safari\n';
-          errorMsg += '2. 找到「相機」選項\n';
-          errorMsg += '3. 選擇「詢問」或「允許」\n';
-          errorMsg += '4. 重新整理頁面\n\n';
-          errorMsg += '如果沒有「相機」選項:\n';
-          errorMsg += '設定 > 隱私權與安全性 > 相機\n';
-          errorMsg += '確認 Safari 有權限';
-        } else if (err.name === 'NotFoundError') {
-          errorMsg += '❌ 找不到相機設備\n\n';
-          errorMsg += '請檢查:\n';
-          errorMsg += '• 裝置是否有相機\n';
-          errorMsg += '• 其他 App 是否正在使用相機';
-        } else if (err.name === 'NotReadableError') {
-          errorMsg += '🔒 相機被其他程式占用\n\n';
-          errorMsg += '請關閉其他使用相機的 App 後重試';
-        } else if (err.name === 'OverconstrainedError') {
-          errorMsg += '⚙️ 相機不支援所需設定\n\n';
-          errorMsg += '請嘗試:\n';
-          errorMsg += '• 更新 iOS 到最新版本\n';
-          errorMsg += '• 使用 Chrome 瀏覽器';
-        } else if (err.name === 'TypeError') {
-          errorMsg += '⚠️ 瀏覽器版本過舊\n\n';
-          errorMsg += '請更新到:\n';
-          errorMsg += '• iOS Safari 14.3+\n';
-          errorMsg += '• Chrome 87+';
-        } else {
-          errorMsg += `錯誤詳情:\n${err.message || err.name || '未知錯誤'}`;
-        }
-        
-        alert(errorMsg);
         stopBarcodeScanner();
-      });
-      
-    } catch (err) {
-      console.error('❌ 初始化失敗:', err);
-      isScanning = false;
-      alert('掃描器初始化失敗\n\n' + (err.message || '未知錯誤'));
-      stopBarcodeScanner();
+      }
+      if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.warn('掃描中...', err);
+      }
+    },
+    {
+      delay: 300, // 降低 CPU 負擔
+      tryHarder: true,
+      formats: [
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.QR_CODE,
+        ZXing.BarcodeFormat.UPC_A
+      ]
     }
-  }, 200); // 延遲 200ms
+  ).catch(err => {
+    console.error('啟動失敗:', err);
+    alert('無法啟動相機：' + (err.message || '未知錯誤'));
+    stopBarcodeScanner();
+  });
+
+  isScanning = true;
 }
 
-// 完全替換 stopBarcodeScanner 函數
 function stopBarcodeScanner() {
-  console.log('關閉掃描器...');
-  
-  if (html5QrCodeInstance && isScanning) {
-    html5QrCodeInstance.stop()
-      .then(() => {
-        console.log('✅ 掃描器已停止');
-        try {
-          html5QrCodeInstance.clear();
-        } catch(e) {
-          console.warn('清理界面失敗:', e);
-        }
-        html5QrCodeInstance = null;
-        isScanning = false;
-      })
-      .catch(err => {
-        console.error('停止掃描器失敗:', err);
-        try {
-          html5QrCodeInstance.clear();
-        } catch(e) {}
-        html5QrCodeInstance = null;
-        isScanning = false;
-      });
-  } else {
-    // 沒有正在掃描,直接清理
-    if (html5QrCodeInstance) {
-      try {
-        html5QrCodeInstance.clear();
-      } catch(e) {}
-      html5QrCodeInstance = null;
-    }
-    isScanning = false;
+  if (codeReader) {
+    codeReader.reset();
+    codeReader = null;
   }
-  
+  isScanning = false;
   document.getElementById('barcodeScanner').style.display = 'none';
   currentScanTarget = null;
 }
+
+// 綁定按鈕
+document.getElementById('scanInSnBtn').onclick = () => startBarcodeScanner('in_sn');
+document.getElementById('scanOutSnBtn').onclick = () => startBarcodeScanner('out_sn');
+document.getElementById('closeScannerBtn').onclick = stopBarcodeScanner;
 
 document.getElementById('inBtn').onclick = async () => {
   const payload = {
