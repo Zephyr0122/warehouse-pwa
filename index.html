@@ -29,6 +29,7 @@
             -webkit-tap-highlight-color: transparent; 
         }
         
+        /* 捲軸美化 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -37,6 +38,7 @@
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        /* 掃描器樣式 */
         #reader video { position: relative; z-index: 0; object-fit: cover; border-radius: 0.5rem; }
         #reader > div { display: none !important; }
         .scan-line { position: absolute; top: 50%; left: 5%; right: 5%; height: 2px; background: red; box-shadow: 0 0 4px red; z-index: 10; animation: pulse-line 1.5s infinite; }
@@ -44,12 +46,15 @@
         .scan-feedback { animation: slide-up 0.3s ease-out; }
         @keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
+        /* 狀態指示燈 */
         .sync-indicator { font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
         .sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .sync-dot.syncing { background-color: #f59e0b; animation: pulse 1s infinite; }
         .sync-dot.synced { background-color: #10b981; }
         .sync-dot.error { background-color: #ef4444; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
+        /* Sortable 樣式 */
         .sortable-ghost { opacity: 0.4; background-color: #e5e7eb; border: 2px dashed #9ca3af; }
         .sortable-drag { cursor: grabbing; opacity: 1; background: white; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .drag-handle { cursor: grab; touch-action: none; padding: 0.5rem; }
@@ -59,6 +64,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // Google Apps Script URL
         const API_URL = "https://script.google.com/macros/s/AKfycbw-Bdj6jjALlnHD94-oX1BKUZdbgds2GKa7PLxW-PN70S-qykf1tyV1moFw44HhAUHdYQ/exec"; 
 
         const { useState, useEffect, useMemo, useRef } = React;
@@ -73,7 +79,6 @@
             return now.toISOString().slice(0, 16);
         };
 
-        // === 掃描器元件 ===
         const Scanner = ({ onScan, onClose }) => {
             const [lastScanned, setLastScanned] = useState(null);
             const scannerRef = useRef(null);
@@ -143,18 +148,9 @@
             const [logFilter, setLogFilter] = useState({ keyword: '', date: '', type: '' });
             const [categoryFilter, setCategoryFilter] = useState('');
             
-            const [customOrder, setCustomOrder] = useState(() => { 
-                const saved = localStorage.getItem('inventory_sort_order'); 
-                return saved ? JSON.parse(saved) : []; 
-            });
-            const [batchCart, setBatchCart] = useState(() => { 
-                const savedCart = localStorage.getItem('inventory_cart'); 
-                return savedCart ? JSON.parse(savedCart) : []; 
-            });
-            const [globalSettings, setGlobalSettings] = useState(() => { 
-                const savedSettings = localStorage.getItem('inventory_settings'); 
-                return savedSettings ? JSON.parse(savedSettings) : { type: 'IN', modifier: '', customDate: getCurrentDateTime() }; 
-            });
+            const [customOrder, setCustomOrder] = useState(() => { const saved = localStorage.getItem('inventory_sort_order'); return saved ? JSON.parse(saved) : []; });
+            const [batchCart, setBatchCart] = useState(() => { const savedCart = localStorage.getItem('inventory_cart'); return savedCart ? JSON.parse(savedCart) : []; });
+            const [globalSettings, setGlobalSettings] = useState(() => { const savedSettings = localStorage.getItem('inventory_settings'); return savedSettings ? JSON.parse(savedSettings) : { type: 'IN', modifier: '', customDate: getCurrentDateTime() }; });
             const [isTimeManual, setIsTimeManual] = useState(false);
 
             const [quickItem, setQuickItem] = useState({ barcode: '', name: '', qty: 1, warehouse: '', location: '', position: '', minStock: 5, note: '', category: '' });
@@ -168,7 +164,7 @@
             useEffect(() => { localStorage.setItem('inventory_cart', JSON.stringify(batchCart)); }, [batchCart]);
             useEffect(() => { localStorage.setItem('inventory_settings', JSON.stringify(globalSettings)); }, [globalSettings]);
             useEffect(() => { localStorage.setItem('inventory_sort_order', JSON.stringify(customOrder)); }, [customOrder]);
-            
+
             useEffect(() => {
                 const timer = setInterval(() => { 
                     if (!isTimeManual) { 
@@ -178,7 +174,7 @@
                 return () => clearInterval(timer);
             }, [isTimeManual]);
 
-            // 初始化 SortableJS
+            // SortableJS 初始化
             useEffect(() => {
                 if (page === 'list' && listRef.current && !search && inventory.length > 0) {
                     const sortable = new Sortable(listRef.current, {
@@ -248,10 +244,7 @@
                         setSyncStatus('synced');
                         setTimeout(() => setSyncStatus('idle'), 3000);
                     } else { setSyncStatus('error'); }
-                } catch (e) { 
-                    setSyncStatus('error'); 
-                    if (!cachedInventory) Swal.fire("連線錯誤", "無法讀取資料", "error"); 
-                }
+                } catch (e) { setSyncStatus('error'); }
                 setLoading(false);
             };
 
@@ -329,7 +322,6 @@
 
             const handleAddQuickItemToCart = () => {
                 if(!quickItem.name && !quickItem.barcode) return Swal.fire('提示', '請輸入名稱或條碼', 'info');
-                if (globalSettings.type === 'SET' && !quickItem.name && !quickItem.barcode) return Swal.fire('錯誤', '盤點模式必須輸入品名或序號', 'warning');
                 setBatchCart(prev => [{ ...quickItem, name: quickItem.name || '', qty: quickItem.qty || 1, warehouse: quickItem.warehouse || '', minStock: quickItem.minStock || 5, category: quickItem.category || '' }, ...prev]);
                 setQuickItem({ barcode: '', name: '', qty: 1, warehouse: '', location: '', position: '', minStock: 5, note: '', category: '' });
             };
@@ -350,15 +342,7 @@
                 const payload = batchCart.map(item => ({ ...item, type: globalSettings.type, qtyChange: globalSettings.type === 'IN' ? item.qty : (globalSettings.type === 'OUT' ? -item.qty : item.qty), qty: item.qty }));
                 const formData = new URLSearchParams();
                 formData.append('action', 'batchUpdate'); formData.append('modifier', globalSettings.modifier); formData.append('customDate', globalSettings.customDate); formData.append('batchData', JSON.stringify(payload));
-                try { 
-                    await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() }); 
-                    Swal.fire({ icon: 'success', title: '完成', timer: 1500, showConfirmButton: false }); 
-                    setBatchCart([]); 
-                    loadData(true); 
-                } catch (e) { 
-                    Swal.fire('錯誤', '連線失敗', 'error'); 
-                    setSyncStatus('error');
-                }
+                try { await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() }); Swal.fire({ icon: 'success', title: '完成', timer: 1500, showConfirmButton: false }); setBatchCart([]); loadData(true); } catch (e) { Swal.fire('錯誤', '連線失敗', 'error'); setSyncStatus('error'); }
                 setLoading(false);
             };
 
@@ -423,7 +407,6 @@
                         <div className="hidden md:flex bg-white p-4 shadow-sm justify-between items-center border-b flex-none"><div className="font-bold text-gray-700 text-lg">{page === 'list' ? '庫存總覽' : page === 'alert' ? '庫存告警' : page === 'form' ? '批量作業' : '歷史紀錄'}</div><div className="flex items-center gap-4">{loading && <div className="loader border-blue-600 border-t-transparent"></div>}<div className="text-sm text-gray-500">{getCurrentDateTime().replace('T', ' ')}</div></div></div>
 
                         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8">
-                            
                             {scanning && <Scanner onScan={handleCameraScan} onClose={() => { setScanning(false); setPage('form'); }} />}
                             <input type="file" ref={fileInputRef} onChange={handleFileImport} className="hidden" accept=".xlsx,.xls,.csv" />
 
@@ -518,7 +501,7 @@
                             )}
 
                             {page === 'form' && (
-                                <div className="flex flex-col h-full max-w-3xl mx-auto relative">
+                                <div className="flex flex-col h-full max-w-3xl mx-auto relative pb-8">
                                     <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100 space-y-6 mb-6">
                                         <div className="flex flex-col md:flex-row gap-6">
                                             <div className="hidden md:flex flex-col w-32 space-y-2">
@@ -561,14 +544,14 @@
                                                 <input list="list-locations" placeholder="地點" className="p-2 border rounded text-sm" value={quickItem.location} onChange={e => setQuickItem({...quickItem, location: e.target.value})} />
                                                 <input list="list-positions" placeholder="位置" className="p-2 border rounded text-sm" value={quickItem.position} onChange={e => setQuickItem({...quickItem, position: e.target.value})} />
                                                 <input placeholder={globalSettings.type === 'OUT' ? "使用地點" : "備註"} className="p-2 border rounded text-sm" value={quickItem.note} onChange={e => setQuickItem({...quickItem, note: e.target.value})} />
-                                                {/* 分類輸入 */}
+                                                {/* 新增：分類輸入 */}
                                                 <input list="list-categories" placeholder="分類" className="p-2 border rounded text-sm" value={quickItem.category} onChange={e => setQuickItem({...quickItem, category: e.target.value})} />
                                             </div>
                                             <button onClick={handleAddQuickItemToCart} className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition"><i className="fa-solid fa-plus mr-2"></i>加入清單</button>
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto pb-24 md:pb-4 space-y-2">
+                                    <div className="flex-1 overflow-y-auto pb-24 md:pb-32 space-y-2">
                                         {batchCart.map((item, idx) => (
                                             <div key={idx} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-300 transition-colors cursor-pointer" onClick={() => handleEditItem(idx)}>
                                                 <div className="flex-1 mr-3">
@@ -586,8 +569,9 @@
                                         {batchCart.length === 0 && <div className="text-center text-gray-300 py-10"><i className="fa-solid fa-basket-shopping text-6xl mb-4 block"></i>清單是空的</div>}
                                     </div>
 
+                                    {/* 修正：確認按鈕固定在底部，且有正確的 Z-index */}
                                     {batchCart.length > 0 && (
-                                        <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-64 md:right-8 md:w-96 z-20 flex justify-center">
+                                        <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-64 md:right-8 md:w-96 z-50 flex justify-center">
                                             <button onClick={handleBatchSubmit} className={`w-full max-w-lg py-4 rounded-xl text-white font-bold shadow-2xl text-lg flex items-center justify-center gap-3 transition transform active:scale-95 ${globalSettings.type === 'IN' ? 'bg-gradient-to-r from-blue-600 to-blue-500' : globalSettings.type === 'OUT' ? 'bg-gradient-to-r from-orange-600 to-orange-500' : 'bg-gradient-to-r from-purple-600 to-purple-500'}`}><i className="fa-solid fa-paper-plane"></i> 確認送出 ({batchCart.length} 筆)</button>
                                         </div>
                                     )}
@@ -613,7 +597,7 @@
                                         </div>
                                     </div>
                                     <div className="space-y-3">{filteredLogs.map((log, idx) => (
-                                        <div key={idx} className="bg-white p-3 rounded-lg shadow-sm border-l-4 border-gray-300 flex flex-col gap-1">
+                                        <div key={idx} className={`bg-white p-3 rounded-lg shadow-sm border-l-4 flex flex-col gap-1 ${log.類型 === 'IN' ? 'border-blue-500' : log.類型 === 'OUT' ? 'border-orange-500' : 'border-purple-500'}`}>
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1 min-w-0 mr-2">
                                                     <div className="font-bold text-lg text-gray-800 break-words">{log.品名}</div>
