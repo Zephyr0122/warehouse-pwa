@@ -536,7 +536,12 @@
                                     <div className="bg-white rounded-xl w-full max-w-sm p-5 space-y-4 shadow-xl">
                                         <h3 className="font-bold text-lg border-b pb-2">編輯項目</h3>
                                         <div><label className="text-xs font-bold text-gray-500">品名</label><input list="list-names" className="w-full p-2 border rounded" value={editItem.name} onChange={e => onEditNameChange(e.target.value)} /></div>
-                                        <div><label className="text-xs font-bold text-gray-500">分類標籤</label><TagEditor tagsString={editItem.category} onChange={val => setEditItem({...editItem, category: val})} /></div>
+                                        
+                                        {/* 條件渲染：只有在非出庫模式下，才顯示分類編輯器 */}
+                                        {globalSettings.type !== 'OUT' && (
+                                            <div><label className="text-xs font-bold text-gray-500">分類標籤</label><TagEditor tagsString={editItem.category} onChange={val => setEditItem({...editItem, category: val})} /></div>
+                                        )}
+
                                         <div><label className="text-xs font-bold text-gray-500">序號</label><textarea rows="2" className="w-full p-2 border rounded text-sm font-mono" value={editItem.barcode} onChange={e => setEditItem({...editItem, barcode: e.target.value, qty: countSerials(e.target.value) })}></textarea></div>
                                         <div className="flex gap-2"><div className="flex-1"><label className="text-xs font-bold text-gray-500">數量</label><input type="number" className="w-full p-2 border rounded text-center font-bold" value={editItem.qty} onChange={e => setEditItem({...editItem, qty: parseInt(e.target.value)||0})} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-500">警戒值</label><input type="number" className="w-full p-2 border rounded text-center" value={editItem.minStock} onChange={e => setEditItem({...editItem, minStock: parseInt(e.target.value)||0})} /></div></div>
                                         <div className="grid grid-cols-3 gap-2 text-sm">
@@ -682,8 +687,10 @@
                                                 {globalSettings.type === 'IN' && <input type="number" placeholder="警戒" className="w-20 p-2 border rounded-lg text-sm text-center bg-white" value={quickItem.minStock} onChange={e => setQuickItem({...quickItem, minStock: parseInt(e.target.value)||0})} />}
                                             </div>
 
-                                            {/* 多重標籤輸入器 */}
-                                            <TagEditor tagsString={quickItem.category} onChange={val => setQuickItem({...quickItem, category: val})} />
+                                            {/* 條件渲染：只有在非出庫模式下，才顯示多重標籤輸入器 */}
+                                            {globalSettings.type !== 'OUT' && (
+                                                <TagEditor tagsString={quickItem.category} onChange={val => setQuickItem({...quickItem, category: val})} />
+                                            )}
 
                                             <div className="grid grid-cols-3 gap-2">
                                                 <input list="list-warehouses" placeholder="倉庫" className="p-2 border rounded text-sm bg-white" value={quickItem.warehouse} onChange={e => setQuickItem({...quickItem, warehouse: e.target.value})} />
@@ -705,6 +712,7 @@
                                                 <div className="flex-1 mr-3">
                                                     <div className="font-bold text-gray-800 flex flex-wrap items-center gap-1.5 mb-1">
                                                         {item.name || <span className="text-red-400 italic">未輸入名稱</span>}
+                                                        {/* 如果是出庫，購物車內依然可見該商品的標籤供辨識，只是不能編輯它 */}
                                                         {tags.map(t => <span key={t} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">{t}</span>)}
                                                     </div>
                                                     <div className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-md font-mono">{item.barcode}</div>
